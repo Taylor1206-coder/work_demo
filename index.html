@@ -274,17 +274,6 @@
     background: #f3f4f6;
     color: #6b7280;
   }
-  .badge-forbidden {
-    display: inline-block;
-    margin-left: 6px;
-    padding: 1px 6px;
-    background: #fef2f2;
-    color: #b91c1c;
-    border: 1px solid #fecaca;
-    border-radius: 4px;
-    font-size: 11px;
-    font-weight: 600;
-  }
   .history-icon {
     cursor: pointer;
     color: #9ca3af;
@@ -593,14 +582,10 @@
         ? `<span class="history-icon" data-history="${idStr}" title="이력 보기">📋</span>`
         : "";
 
-      const forbiddenBadge = c.collectionForbidden
-        ? `<span class="badge-forbidden">추심금지</span>`
-        : "";
-
       tr.innerHTML = `
         <td class="checkbox-col"><input type="checkbox" data-id="${idStr}" ${selectedIds.has(idStr) ? "checked" : ""}></td>
         <td>${idx + 1}</td>
-        <td><strong>${c.dealNo}</strong>${forbiddenBadge}</td>
+        <td><strong>${c.dealNo}</strong></td>
         <td class="amount">${fmtMoney(c.loanAmount)}</td>
         <td class="amount">${fmtMoney(c.overduePrincipal)}</td>
         <td class="amount">${c.overdueDays}일</td>
