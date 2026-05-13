@@ -28,9 +28,23 @@
 
   .tabs {
     display: flex;
+    align-items: center;
     border-bottom: 1px solid #eaecef;
     padding: 0 24px;
+    gap: 0;
   }
+  .tab-group {
+    display: flex;
+    align-items: center;
+  }
+  .tab-group.tab-group-primary { flex: 1; }
+  .tab-divider {
+    width: 1px;
+    height: 22px;
+    background: #e5e7eb;
+    margin: 0 14px;
+  }
+  /* 기본(primary) 탭: 전체 / 30일미만 / 30일 이상 / 추심 금지 */
   .tab {
     padding: 14px 18px;
     font-size: 14px;
@@ -38,6 +52,9 @@
     cursor: pointer;
     border-bottom: 2px solid transparent;
     font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
   .tab.active {
     color: #2563eb;
@@ -45,11 +62,59 @@
     font-weight: 600;
   }
   .tab .count {
-    margin-left: 6px;
     color: #9ca3af;
     font-size: 12px;
   }
   .tab.active .count { color: #2563eb; }
+
+  /* 미배정 탭: 별도 GUI 스타일 (강조형 pill 버튼) */
+  .tab-unassigned {
+    padding: 7px 14px;
+    font-size: 13px;
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+  .tab-unassigned::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #f97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.18);
+  }
+  .tab-unassigned:hover {
+    background: #ffedd5;
+    border-color: #fdba74;
+  }
+  .tab-unassigned.active {
+    background: #f97316;
+    border-color: #f97316;
+    color: #fff;
+  }
+  .tab-unassigned.active::before {
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+  }
+  .tab-unassigned .count {
+    font-size: 12px;
+    background: rgba(180, 83, 9, 0.12);
+    color: #9a3412;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-weight: 700;
+  }
+  .tab-unassigned.active .count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+  }
 
   .toolbar {
     display: flex;
@@ -209,6 +274,17 @@
     background: #f3f4f6;
     color: #6b7280;
   }
+  .badge-forbidden {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    background: #fef2f2;
+    color: #b91c1c;
+    border: 1px solid #fecaca;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+  }
   .history-icon {
     cursor: pointer;
     color: #9ca3af;
@@ -337,9 +413,16 @@
     </div>
 
     <div class="tabs">
-      <div class="tab active" data-tab="unassigned">미배정 <span class="count" id="cnt-unassigned">0</span></div>
-      <div class="tab" data-tab="assigned">배정완료 <span class="count" id="cnt-assigned">0</span></div>
-      <div class="tab" data-tab="all">전체 <span class="count" id="cnt-all">0</span></div>
+      <div class="tab-group tab-group-primary">
+        <div class="tab active" data-tab="all">전체 <span class="count">(<span id="cnt-all">0</span>)</span></div>
+        <div class="tab" data-tab="under30">30일 미만 <span class="count">(<span id="cnt-under30">0</span>)</span></div>
+        <div class="tab" data-tab="over30">30일 이상 <span class="count">(<span id="cnt-over30">0</span>)</span></div>
+        <div class="tab" data-tab="forbidden">추심 금지 <span class="count">(<span id="cnt-forbidden">0</span>)</span></div>
+      </div>
+      <div class="tab-divider"></div>
+      <div class="tab-group">
+        <div class="tab-unassigned" data-tab="unassigned">미배정 <span class="count" id="cnt-unassigned">0</span></div>
+      </div>
     </div>
 
     <div class="toolbar">
@@ -400,32 +483,39 @@
   const CURRENT_USER = "김도윤";
 
   // ===== Data =====
-  // 필드: id(내부키), dealNo(딜번호 5자리), loanAmount(대출액), overduePrincipal(연체 원금),
-  //       overdueDays(연체일수), assignee(담당자), assignedAt(배정일 YYYY-MM-DD),
-  //       updatedAt(최근 업데이트 시간 YYYY-MM-DD hh:mm:ss),
-  //       history[]: 각 항목에 assignedBy(배정 작업 수행자) 포함
+  // 필드: id, dealNo, loanAmount, overduePrincipal, overdueDays,
+  //       collectionForbidden(추심 금지 여부), assignee, assignedAt, updatedAt,
+  //       history[]: assignedBy(배정 작업 수행자) 포함
   const claims = [
-    { id: 1,  dealNo: "84217", loanAmount: 15_000_000, overduePrincipal: 5_420_000,  overdueDays: 12, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 09:12:33", history: [] },
-    { id: 2,  dealNo: "29508", loanAmount:  8_000_000, overduePrincipal: 2_180_000,  overdueDays:  7, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 10:48:02", history: [] },
-    { id: 3,  dealNo: "61374", loanAmount: 25_000_000, overduePrincipal: 8_750_000,  overdueDays: 24, assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", history: [
+    { id: 1,  dealNo: "84217", loanAmount: 15_000_000, overduePrincipal: 5_420_000,  overdueDays: 12, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 09:12:33", history: [] },
+    { id: 2,  dealNo: "29508", loanAmount:  8_000_000, overduePrincipal: 2_180_000,  overdueDays:  7, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 10:48:02", history: [] },
+    { id: 3,  dealNo: "61374", loanAmount: 25_000_000, overduePrincipal: 8_750_000,  overdueDays: 24, collectionForbidden: false, assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", history: [
       { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", action: "배정", assignedBy: "김도윤" }
     ]},
-    { id: 4,  dealNo: "47829", loanAmount:  5_000_000, overduePrincipal: 1_320_000,  overdueDays:  3, assignee: null,    assignedAt: null,         updatedAt: "2026-05-03 11:05:47", history: [] },
-    { id: 5,  dealNo: "93162", loanAmount: 40_000_000, overduePrincipal: 12_500_000, overdueDays: 45, assignee: "이지영", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", history: [
+    { id: 4,  dealNo: "47829", loanAmount:  5_000_000, overduePrincipal: 1_320_000,  overdueDays:  3, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-03 11:05:47", history: [] },
+    { id: 5,  dealNo: "93162", loanAmount: 40_000_000, overduePrincipal: 12_500_000, overdueDays: 45, collectionForbidden: false, assignee: "이지영", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", history: [
       { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 11:02:18", action: "배정",   assignedBy: "박상혁" },
       { assignee: "이지영", previousAssignee: "김민수", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", action: "재배정", assignedBy: "김도윤" }
     ]},
-    { id: 6,  dealNo: "15983", loanAmount: 12_000_000, overduePrincipal: 3_980_000,  overdueDays:  9, assignee: null,    assignedAt: null,         updatedAt: "2026-05-04 16:30:12", history: [] },
-    { id: 7,  dealNo: "70416", loanAmount: 20_000_000, overduePrincipal: 6_700_000,  overdueDays: 18, assignee: null,    assignedAt: null,         updatedAt: "2026-05-05 08:55:21", history: [] },
-    { id: 8,  dealNo: "38275", loanAmount: 13_500_000, overduePrincipal: 4_150_000,  overdueDays: 15, assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", history: [
+    { id: 6,  dealNo: "15983", loanAmount: 12_000_000, overduePrincipal: 3_980_000,  overdueDays:  9, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-04 16:30:12", history: [] },
+    { id: 7,  dealNo: "70416", loanAmount: 20_000_000, overduePrincipal: 6_700_000,  overdueDays: 18, collectionForbidden: true,  assignee: "최서연", assignedAt: "2026-05-06", updatedAt: "2026-05-06 11:20:08", history: [
+      { assignee: "최서연", assignedAt: "2026-05-06", updatedAt: "2026-05-06 11:20:08", action: "배정", assignedBy: "박상혁" }
+    ]},
+    { id: 8,  dealNo: "38275", loanAmount: 13_500_000, overduePrincipal: 4_150_000,  overdueDays: 15, collectionForbidden: false, assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", history: [
       { assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", action: "배정", assignedBy: "김도윤" }
     ]},
-    { id: 9,  dealNo: "56091", loanAmount: 30_000_000, overduePrincipal: 9_300_000,  overdueDays: 33, assignee: null,    assignedAt: null,         updatedAt: "2026-05-07 13:42:09", history: [] },
-    { id: 10, dealNo: "82647", loanAmount:  9_500_000, overduePrincipal: 2_640_000,  overdueDays:  5, assignee: null,    assignedAt: null,         updatedAt: "2026-05-08 17:01:55", history: [] },
+    { id: 9,  dealNo: "56091", loanAmount: 30_000_000, overduePrincipal: 9_300_000,  overdueDays: 33, collectionForbidden: false, assignee: "장도현", assignedAt: "2026-05-09", updatedAt: "2026-05-09 10:05:14", history: [
+      { assignee: "장도현", assignedAt: "2026-05-09", updatedAt: "2026-05-09 10:05:14", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 10, dealNo: "82647", loanAmount:  9_500_000, overduePrincipal: 2_640_000,  overdueDays:  5, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-08 17:01:55", history: [] },
+    { id: 11, dealNo: "53921", loanAmount: 18_000_000, overduePrincipal: 5_960_000,  overdueDays: 52, collectionForbidden: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-09 14:22:51", history: [] },
+    { id: 12, dealNo: "67148", loanAmount: 22_500_000, overduePrincipal: 7_320_000,  overdueDays: 41, collectionForbidden: true,  assignee: "이지영", assignedAt: "2026-05-10", updatedAt: "2026-05-10 09:30:00", history: [
+      { assignee: "이지영", assignedAt: "2026-05-10", updatedAt: "2026-05-10 09:30:00", action: "배정", assignedBy: "박상혁" }
+    ]},
   ];
 
   // ===== State =====
-  let currentTab = "unassigned";
+  let currentTab = "all";
   let assignMode = false;
   let selectedIds = new Set();
 
@@ -437,10 +527,22 @@
     `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   const formatTimestamp = (d = new Date()) =>
     `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  // 분류 기준
+  //  - 미배정(unassigned): 담당자 없음
+  //  - 배정 건은 다시 추심 금지 > 30일 이상 > 30일 미만 순으로 우선 분류
+  //  - 전체(all)는 모든 항목 (배정 + 미배정)
+  const isAssigned         = (c) => !!c.assignee;
+  const isUnassigned       = (c) => !c.assignee;
+  const isForbidden        = (c) => isAssigned(c) && c.collectionForbidden;
+  const isOver30Assigned   = (c) => isAssigned(c) && !c.collectionForbidden && c.overdueDays >= 30;
+  const isUnder30Assigned  = (c) => isAssigned(c) && !c.collectionForbidden && c.overdueDays < 30;
+
   const filteredClaims = () => {
-    if (currentTab === "unassigned") return claims.filter(c => !c.assignee);
-    if (currentTab === "assigned")   return claims.filter(c => !!c.assignee);
-    return claims;
+    if (currentTab === "unassigned") return claims.filter(isUnassigned);
+    if (currentTab === "under30")    return claims.filter(isUnder30Assigned);
+    if (currentTab === "over30")     return claims.filter(isOver30Assigned);
+    if (currentTab === "forbidden")  return claims.filter(isForbidden);
+    return claims; // all
   };
   const showToast = (msg) => {
     const t = $("#toast");
@@ -452,9 +554,18 @@
 
   // ===== Render =====
   function renderCounts() {
-    $("#cnt-unassigned").textContent = claims.filter(c => !c.assignee).length;
-    $("#cnt-assigned").textContent   = claims.filter(c => !!c.assignee).length;
-    $("#cnt-all").textContent        = claims.length;
+    const under30   = claims.filter(isUnder30Assigned).length;
+    const over30    = claims.filter(isOver30Assigned).length;
+    const forbidden = claims.filter(isForbidden).length;
+    const assigned  = under30 + over30 + forbidden;     // 배정 건 총계
+    const unassigned = claims.filter(isUnassigned).length;
+    const all       = assigned + unassigned;            // 전체 총계
+
+    $("#cnt-all").textContent        = all;
+    $("#cnt-under30").textContent    = under30;
+    $("#cnt-over30").textContent     = over30;
+    $("#cnt-forbidden").textContent  = forbidden;
+    $("#cnt-unassigned").textContent = unassigned;
   }
 
   function renderTable() {
@@ -482,10 +593,14 @@
         ? `<span class="history-icon" data-history="${idStr}" title="이력 보기">📋</span>`
         : "";
 
+      const forbiddenBadge = c.collectionForbidden
+        ? `<span class="badge-forbidden">추심금지</span>`
+        : "";
+
       tr.innerHTML = `
         <td class="checkbox-col"><input type="checkbox" data-id="${idStr}" ${selectedIds.has(idStr) ? "checked" : ""}></td>
         <td>${idx + 1}</td>
-        <td><strong>${c.dealNo}</strong></td>
+        <td><strong>${c.dealNo}</strong>${forbiddenBadge}</td>
         <td class="amount">${fmtMoney(c.loanAmount)}</td>
         <td class="amount">${fmtMoney(c.overduePrincipal)}</td>
         <td class="amount">${c.overdueDays}일</td>
@@ -653,10 +768,12 @@
   }
 
   // ===== Event listeners =====
-  document.querySelectorAll(".tab").forEach(tab => {
+  // 두 그룹(.tab / .tab-unassigned) 모두 클릭 가능
+  const allTabEls = document.querySelectorAll(".tab, .tab-unassigned");
+  allTabEls.forEach(tab => {
     tab.addEventListener("click", () => {
       if (assignMode) exitAssignMode();
-      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      allTabEls.forEach(t => t.classList.remove("active"));
       tab.classList.add("active");
       currentTab = tab.dataset.tab;
       renderTable();
