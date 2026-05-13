@@ -1,0 +1,697 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>채권 담당자 배정 관리</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f5f6f8;
+    color: #222;
+    padding: 24px;
+  }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
+  }
+  .header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eaecef;
+  }
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header p { font-size: 13px; color: #6b7280; margin-top: 4px; }
+
+  .tabs {
+    display: flex;
+    border-bottom: 1px solid #eaecef;
+    padding: 0 24px;
+  }
+  .tab {
+    padding: 14px 18px;
+    font-size: 14px;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+  }
+  .tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+  }
+  .tab .count {
+    margin-left: 6px;
+    color: #9ca3af;
+    font-size: 12px;
+  }
+  .tab.active .count { color: #2563eb; }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: #fafbfc;
+    border-bottom: 1px solid #eaecef;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .selected-info {
+    font-size: 13px;
+    color: #2563eb;
+    font-weight: 500;
+  }
+
+  button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  button:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+  .btn-primary:disabled {
+    background: #9ca3af;
+    border-color: #9ca3af;
+    color: #fff;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #6b7280;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+    color: #111;
+  }
+
+  select {
+    padding: 8px 28px 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+    min-width: 160px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead {
+    background: #f9fafb;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #4b5563;
+    font-size: 12px;
+    border-bottom: 1px solid #eaecef;
+    white-space: nowrap;
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+  }
+  tbody tr {
+    transition: background 0.1s;
+  }
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+  tbody tr.selected {
+    background: #eff6ff;
+  }
+  tbody tr.selected:hover {
+    background: #dbeafe;
+  }
+
+  .checkbox-col {
+    width: 40px;
+    text-align: center;
+  }
+  .checkbox-col,
+  th.checkbox-col {
+    display: none;
+  }
+  body.assign-mode .checkbox-col,
+  body.assign-mode th.checkbox-col {
+    display: table-cell;
+  }
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2563eb;
+  }
+
+  .assignee-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .assignee-name {
+    font-weight: 500;
+  }
+  .assignee-unassigned {
+    color: #9ca3af;
+    font-style: normal;
+  }
+  .assignee-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-unassigned {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+  .history-icon {
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 12px;
+    user-select: none;
+    margin-left: 4px;
+  }
+  .history-icon:hover { color: #2563eb; }
+
+  .amount { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .time-cell { color: #6b7280; font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  .empty {
+    padding: 60px 24px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+  }
+
+  /* History list */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .history-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid #eaecef;
+    white-space: nowrap;
+  }
+  .history-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .history-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-assign     { background: #ecfdf5; color: #047857; }
+  .status-reassign   { background: #fef3c7; color: #92400e; }
+  .status-unassign   { background: #f3f4f6; color: #6b7280; }
+  .history-empty {
+    color: #9ca3af;
+    text-align: center;
+    padding: 28px 0;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 25px rgba(0,0,0,0.1);
+  }
+  .modal-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid #eaecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 0; }
+  .modal-body { padding: 20px; max-height: 400px; overflow-y: auto; }
+  .history-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-name { font-weight: 500; }
+  .history-action { color: #6b7280; font-size: 12px; }
+  .history-time { color: #9ca3af; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>채권 담당자 배정 관리</h1>
+      <p>수탁사 관리자는 채권 리스트를 확인 후 실무 인력별로 채권을 배정할 수 있습니다.</p>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active" data-tab="unassigned">미배정 <span class="count" id="cnt-unassigned">0</span></div>
+      <div class="tab" data-tab="assigned">배정완료 <span class="count" id="cnt-assigned">0</span></div>
+      <div class="tab" data-tab="all">전체 <span class="count" id="cnt-all">0</span></div>
+    </div>
+
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="selected-info" id="selected-info" style="display:none;">0건 선택됨</span>
+      </div>
+      <div class="toolbar-right">
+        <select id="assignee-select" style="display:none;">
+          <option value="">담당자 선택</option>
+          <option value="__unassigned__">미배정</option>
+          <option value="김민수">김민수</option>
+          <option value="이지영">이지영</option>
+          <option value="박정훈">박정훈</option>
+          <option value="최서연">최서연</option>
+          <option value="장도현">장도현</option>
+        </select>
+        <button id="btn-cancel" class="btn-ghost" style="display:none;">취소</button>
+        <button id="btn-assign" class="btn-primary">담당자 배정</button>
+      </div>
+    </div>
+
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-col"><input type="checkbox" id="check-all"></th>
+            <th>No.</th>
+            <th>딜번호</th>
+            <th>대출액</th>
+            <th>연체 원금</th>
+            <th>연체일수</th>
+            <th>담당자</th>
+            <th>배정일</th>
+            <th>최근 업데이트 시간</th>
+          </tr>
+        </thead>
+        <tbody id="claim-tbody"></tbody>
+      </table>
+      <div class="empty" id="empty-state" style="display:none;">표시할 채권이 없습니다.</div>
+    </div>
+  </div>
+
+  <!-- History modal -->
+  <div class="modal-backdrop" id="history-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="history-title">담당자 배정 이력</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="history-body"></div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  // ===== Current user (배정 작업을 수행하는 관리자) =====
+  const CURRENT_USER = "김도윤";
+
+  // ===== Data =====
+  // 필드: id(내부키), dealNo(딜번호 5자리), loanAmount(대출액), overduePrincipal(연체 원금),
+  //       overdueDays(연체일수), assignee(담당자), assignedAt(배정일 YYYY-MM-DD),
+  //       updatedAt(최근 업데이트 시간 YYYY-MM-DD hh:mm:ss),
+  //       history[]: 각 항목에 assignedBy(배정 작업 수행자) 포함
+  const claims = [
+    { id: 1,  dealNo: "84217", loanAmount: 15_000_000, overduePrincipal: 5_420_000,  overdueDays: 12, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 09:12:33", history: [] },
+    { id: 2,  dealNo: "29508", loanAmount:  8_000_000, overduePrincipal: 2_180_000,  overdueDays:  7, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 10:48:02", history: [] },
+    { id: 3,  dealNo: "61374", loanAmount: 25_000_000, overduePrincipal: 8_750_000,  overdueDays: 24, assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", history: [
+      { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 4,  dealNo: "47829", loanAmount:  5_000_000, overduePrincipal: 1_320_000,  overdueDays:  3, assignee: null,    assignedAt: null,         updatedAt: "2026-05-03 11:05:47", history: [] },
+    { id: 5,  dealNo: "93162", loanAmount: 40_000_000, overduePrincipal: 12_500_000, overdueDays: 45, assignee: "이지영", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", history: [
+      { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 11:02:18", action: "배정",   assignedBy: "박상혁" },
+      { assignee: "이지영", previousAssignee: "김민수", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", action: "재배정", assignedBy: "김도윤" }
+    ]},
+    { id: 6,  dealNo: "15983", loanAmount: 12_000_000, overduePrincipal: 3_980_000,  overdueDays:  9, assignee: null,    assignedAt: null,         updatedAt: "2026-05-04 16:30:12", history: [] },
+    { id: 7,  dealNo: "70416", loanAmount: 20_000_000, overduePrincipal: 6_700_000,  overdueDays: 18, assignee: null,    assignedAt: null,         updatedAt: "2026-05-05 08:55:21", history: [] },
+    { id: 8,  dealNo: "38275", loanAmount: 13_500_000, overduePrincipal: 4_150_000,  overdueDays: 15, assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", history: [
+      { assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 9,  dealNo: "56091", loanAmount: 30_000_000, overduePrincipal: 9_300_000,  overdueDays: 33, assignee: null,    assignedAt: null,         updatedAt: "2026-05-07 13:42:09", history: [] },
+    { id: 10, dealNo: "82647", loanAmount:  9_500_000, overduePrincipal: 2_640_000,  overdueDays:  5, assignee: null,    assignedAt: null,         updatedAt: "2026-05-08 17:01:55", history: [] },
+  ];
+
+  // ===== State =====
+  let currentTab = "unassigned";
+  let assignMode = false;
+  let selectedIds = new Set();
+
+  // ===== Helpers =====
+  const $ = (sel) => document.querySelector(sel);
+  const fmtMoney = (n) => n.toLocaleString("ko-KR") + "원";
+  const pad = (x, n = 2) => String(x).padStart(n, "0");
+  const formatDate = (d = new Date()) =>
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const formatTimestamp = (d = new Date()) =>
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  const filteredClaims = () => {
+    if (currentTab === "unassigned") return claims.filter(c => !c.assignee);
+    if (currentTab === "assigned")   return claims.filter(c => !!c.assignee);
+    return claims;
+  };
+  const showToast = (msg) => {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+  };
+
+  // ===== Render =====
+  function renderCounts() {
+    $("#cnt-unassigned").textContent = claims.filter(c => !c.assignee).length;
+    $("#cnt-assigned").textContent   = claims.filter(c => !!c.assignee).length;
+    $("#cnt-all").textContent        = claims.length;
+  }
+
+  function renderTable() {
+    const tbody = $("#claim-tbody");
+    const list = filteredClaims();
+    tbody.innerHTML = "";
+
+    if (list.length === 0) {
+      $("#empty-state").style.display = "block";
+    } else {
+      $("#empty-state").style.display = "none";
+    }
+
+    list.forEach((c, idx) => {
+      const idStr = String(c.id);
+      const tr = document.createElement("tr");
+      tr.dataset.id = idStr;
+      if (selectedIds.has(idStr)) tr.classList.add("selected");
+
+      const assigneeCell = c.assignee
+        ? `<span class="assignee-badge">${c.assignee}</span>`
+        : `<span class="assignee-badge badge-unassigned">미배정</span>`;
+
+      const historyBtn = c.history.length > 0
+        ? `<span class="history-icon" data-history="${idStr}" title="이력 보기">📋</span>`
+        : "";
+
+      tr.innerHTML = `
+        <td class="checkbox-col"><input type="checkbox" data-id="${idStr}" ${selectedIds.has(idStr) ? "checked" : ""}></td>
+        <td>${idx + 1}</td>
+        <td><strong>${c.dealNo}</strong></td>
+        <td class="amount">${fmtMoney(c.loanAmount)}</td>
+        <td class="amount">${fmtMoney(c.overduePrincipal)}</td>
+        <td class="amount">${c.overdueDays}일</td>
+        <td><div class="assignee-cell">${assigneeCell}${historyBtn}</div></td>
+        <td class="time-cell">${c.assignedAt || "-"}</td>
+        <td class="time-cell">${c.updatedAt || "-"}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    // Row click toggles checkbox in assign mode
+    tbody.querySelectorAll("tr").forEach(tr => {
+      tr.addEventListener("click", (e) => {
+        if (!assignMode) return;
+        if (e.target.classList.contains("history-icon")) return;
+        const id = tr.dataset.id;
+        const cb = tr.querySelector("input[type=checkbox]");
+        if (e.target.tagName !== "INPUT") cb.checked = !cb.checked;
+        if (cb.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+        tr.classList.toggle("selected", cb.checked);
+        updateSelectedInfo();
+        updateAssignButtonState();
+      });
+    });
+
+    // History icon click
+    tbody.querySelectorAll(".history-icon").forEach(icon => {
+      icon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openHistory(icon.dataset.history);
+      });
+    });
+  }
+
+  function updateSelectedInfo() {
+    const info = $("#selected-info");
+    if (assignMode) {
+      info.style.display = "inline";
+      info.textContent = `${selectedIds.size}건 선택됨`;
+    } else {
+      info.style.display = "none";
+    }
+  }
+
+  function updateAssignButtonState() {
+    const btn = $("#btn-assign");
+    const sel = $("#assignee-select");
+    if (!assignMode) {
+      btn.disabled = false;
+      return;
+    }
+    // 배정 완료 모드: 실무자 선택 + 1개 이상 체크되어야 활성화
+    btn.disabled = !sel.value || selectedIds.size === 0;
+  }
+
+  // ===== Assign mode =====
+  function enterAssignMode() {
+    assignMode = true;
+    document.body.classList.add("assign-mode");
+    $("#assignee-select").style.display = "inline-block";
+    $("#btn-cancel").style.display = "inline-block";
+    $("#btn-assign").textContent = "배정 완료";
+    $("#btn-assign").disabled = true;
+    selectedIds.clear();
+    updateSelectedInfo();
+    renderTable();
+  }
+
+  function exitAssignMode() {
+    assignMode = false;
+    document.body.classList.remove("assign-mode");
+    $("#assignee-select").style.display = "none";
+    $("#assignee-select").value = "";
+    $("#btn-cancel").style.display = "none";
+    $("#btn-assign").textContent = "담당자 배정";
+    $("#btn-assign").disabled = false;
+    $("#check-all").checked = false;
+    selectedIds.clear();
+    updateSelectedInfo();
+    renderTable();
+  }
+
+  function completeAssign() {
+    const selectVal = $("#assignee-select").value;
+    if (!selectVal || selectedIds.size === 0) return;
+
+    const isUnassign = selectVal === "__unassigned__";
+    const newAssignee = isUnassign ? null : selectVal;
+    const nowDate = formatDate(new Date());
+    const nowTimestamp = formatTimestamp(new Date());
+
+    let count = 0;
+    selectedIds.forEach(id => {
+      const c = claims.find(x => String(x.id) === String(id));
+      if (!c) return;
+      const prev = c.assignee;
+      const action = isUnassign
+        ? "미배정 전환"
+        : (prev ? "재배정" : "배정");
+
+      // history: 이전 담당자가 있을 경우 이전 담당자명/배정일 보존, 작업 수행자(배정자) 기록
+      c.history.push({
+        assignee: isUnassign ? "미배정" : newAssignee,
+        previousAssignee: prev || null,
+        assignedAt: isUnassign ? null : nowDate,
+        updatedAt: nowTimestamp,
+        action,
+        assignedBy: CURRENT_USER,
+      });
+      c.assignee = newAssignee;
+      c.assignedAt = isUnassign ? null : nowDate;
+      c.updatedAt = nowTimestamp;
+      count++;
+    });
+
+    showToast(`${count}건 ${isUnassign ? "미배정 전환" : "배정 완료"}`);
+    exitAssignMode();
+    renderCounts();
+  }
+
+  // ===== History modal =====
+  function openHistory(id) {
+    const c = claims.find(x => String(x.id) === String(id));
+    if (!c) return;
+
+    // 팝업 타이틀: 담당자 배정 이력 (#딜번호)
+    $("#history-title").textContent = `담당자 배정 이력 (#${c.dealNo})`;
+
+    const body = $("#history-body");
+    if (c.history.length === 0) {
+      body.innerHTML = `<div class="history-empty">이력이 없습니다.</div>`;
+    } else {
+      const statusClass = (action) => {
+        if (action === "배정")       return "status-assign";
+        if (action === "재배정")     return "status-reassign";
+        if (action === "미배정 전환") return "status-unassign";
+        return "";
+      };
+      // 최신순 정렬
+      const rows = [...c.history].reverse().map(h => `
+        <tr>
+          <td><span class="history-status ${statusClass(h.action)}">${h.action}</span></td>
+          <td>${h.assignee || "미배정"}</td>
+          <td class="time-cell">${h.updatedAt || "-"}</td>
+          <td>${h.assignedBy || "-"}</td>
+        </tr>
+      `).join("");
+
+      body.innerHTML = `
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>상태</th>
+              <th>담당자</th>
+              <th>배정 시간</th>
+              <th>배정자</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+    $("#history-modal").classList.add("show");
+  }
+
+  // ===== Event listeners =====
+  document.querySelectorAll(".tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+      if (assignMode) exitAssignMode();
+      document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentTab = tab.dataset.tab;
+      renderTable();
+    });
+  });
+
+  $("#btn-assign").addEventListener("click", () => {
+    if (!assignMode) enterAssignMode();
+    else completeAssign();
+  });
+
+  $("#btn-cancel").addEventListener("click", exitAssignMode);
+
+  $("#assignee-select").addEventListener("change", updateAssignButtonState);
+
+  $("#check-all").addEventListener("change", (e) => {
+    const checked = e.target.checked;
+    filteredClaims().forEach(c => {
+      const idStr = String(c.id);
+      if (checked) selectedIds.add(idStr);
+      else selectedIds.delete(idStr);
+    });
+    renderTable();
+    updateSelectedInfo();
+    updateAssignButtonState();
+  });
+
+  $("#modal-close").addEventListener("click", () => $("#history-modal").classList.remove("show"));
+  $("#history-modal").addEventListener("click", (e) => {
+    if (e.target.id === "history-modal") $("#history-modal").classList.remove("show");
+  });
+
+  // Init
+  renderCounts();
+  renderTable();
+</script>
+</body>
+</html>
