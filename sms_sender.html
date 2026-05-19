@@ -326,7 +326,7 @@
             <input type="time" id="schedTime" value="09:00" />
           </div>
         </div>
-        <p class="help">선택한 날짜와 시간에 자동으로 발송됩니다.</p>
+        <p class="help">선택한 날짜와 시간에 자동으로 발송됩니다. 과거 시점은 선택할 수 없습니다.</p>
       </div>
     </div>
 
@@ -380,10 +380,18 @@
     return `${y}년 ${m}월 ${day}일`;
   }
 
+  // 로컬 타임존 기준 YYYY-MM-DD
+  function localISODate(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  }
+
   function addDaysISO(days) {
     const d = new Date();
     d.setDate(d.getDate() + days);
-    return d.toISOString().slice(0, 10);
+    return localISODate(d);
   }
 
   // FormatterUtil.toNumFormat(unpaidAmount) — 천 단위 콤마
@@ -469,12 +477,25 @@
     });
   });
 
-  // Default scheduled date = tomorrow
+  // 예약일 초기화: min = 오늘, 기본값 = 내일 (과거 선택 차단)
   (function () {
-    const d = new Date();
-    d.setDate(d.getDate() + 1);
-    $("schedDate").value = d.toISOString().slice(0, 10);
+    const now = new Date();
+    const todayStr = localISODate(now);
+    const tomorrow = new Date();
+    tomorrow.setDate(now.getDate() + 1);
+    const schedDate = $("schedDate");
+    schedDate.min = todayStr;        // datepicker에서 과거 날짜 비활성화
+    schedDate.value = localISODate(tomorrow);
   })();
+
+  // 사용자가 직접 과거 날짜를 타이핑/붙여넣기 하는 경우에도 차단
+  $("schedDate").addEventListener("change", (e) => {
+    const todayStr = localISODate(new Date());
+    if (e.target.value && e.target.value < todayStr) {
+      showToast("과거 날짜는 선택할 수 없습니다.");
+      e.target.value = todayStr;
+    }
+  });
 
   // -- Validation helper --
   function getFormData() {
@@ -498,14 +519,14 @@
     if (data.sendType === "scheduled") {
       if (!data.schedDate) return "예약일을 선택해주세요.";
       if (!data.schedTime) return "예약 시간을 입력해주세요.";
-      // Check that scheduled time is in the future
+      // 과거 시점(날짜+시간) 차단
       const [hh, mm] = data.schedTime.split(":").map(Number);
       let hour24 = hh % 12;
       if (data.schedMeridian === "PM") hour24 += 12;
       const target = new Date(data.schedDate + "T00:00:00");
       target.setHours(hour24, mm, 0, 0);
       if (target.getTime() <= Date.now())
-        return "예약 시간은 현재 이후로 설정해주세요.";
+        return "예약 시점은 현재 이후로 설정해주세요.";
     }
     return null;
   }
