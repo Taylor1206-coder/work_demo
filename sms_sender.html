@@ -16,6 +16,7 @@
     --card: #ffffff;
     --success: #10b981;
     --danger: #ef4444;
+    --warning: #f59e0b;
   }
   * { box-sizing: border-box; }
   body {
@@ -27,13 +28,21 @@
     padding: 24px;
     min-height: 100vh;
   }
-  .container {
-    max-width: 720px;
+  .page {
+    max-width: 1080px;
     margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+  .form-wrap { max-width: 720px; width: 100%; margin: 0 auto; }
+  .container,
+  .history-section {
     background: var(--card);
     border-radius: 12px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
-    padding: 32px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05),
+      0 4px 12px rgba(0, 0, 0, 0.04);
+    padding: 28px;
   }
   h1 {
     margin: 0 0 8px;
@@ -45,9 +54,7 @@
     margin: 0 0 28px;
     font-size: 14px;
   }
-  .field {
-    margin-bottom: 20px;
-  }
+  .field { margin-bottom: 20px; }
   label {
     display: block;
     font-size: 13px;
@@ -55,10 +62,7 @@
     margin-bottom: 6px;
     color: #374151;
   }
-  .required::after {
-    content: " *";
-    color: var(--danger);
-  }
+  .required::after { content: " *"; color: var(--danger); }
   input[type="text"],
   input[type="tel"],
   input[type="date"],
@@ -75,34 +79,20 @@
     color: var(--text);
     transition: border-color 0.15s, box-shadow 0.15s;
   }
-  input:focus,
-  select:focus,
-  textarea:focus {
+  input:focus, select:focus, textarea:focus {
     outline: none;
     border-color: var(--primary);
     box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   }
-  textarea {
-    min-height: 200px;
-    resize: vertical;
-    line-height: 1.6;
-  }
-  .row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 16px;
-  }
+  textarea { min-height: 200px; resize: vertical; line-height: 1.6; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
   .char-count {
     text-align: right;
     font-size: 12px;
     color: var(--text-muted);
     margin-top: 4px;
   }
-  .radio-group {
-    display: flex;
-    gap: 16px;
-    margin-top: 4px;
-  }
+  .radio-group { display: flex; gap: 16px; margin-top: 4px; }
   .radio-option {
     display: flex;
     align-items: center;
@@ -115,12 +105,8 @@
     background: #fff;
     transition: all 0.15s;
   }
-  .radio-option:hover {
-    border-color: var(--primary);
-  }
-  .radio-option input {
-    accent-color: var(--primary);
-  }
+  .radio-option:hover { border-color: var(--primary); }
+  .radio-option input { accent-color: var(--primary); }
   .radio-option.active {
     border-color: var(--primary);
     background: rgba(37, 99, 235, 0.05);
@@ -157,21 +143,31 @@
     transition: all 0.15s;
     font-family: inherit;
   }
+  button:disabled { opacity: 0.55; cursor: not-allowed; }
   .btn-secondary {
     background: #fff;
     border-color: var(--border);
     color: var(--text);
   }
-  .btn-secondary:hover {
-    background: var(--secondary);
-  }
+  .btn-secondary:hover:not(:disabled) { background: var(--secondary); }
   .btn-primary {
     background: var(--primary);
     color: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
   }
-  .btn-primary:hover {
-    background: var(--primary-hover);
+  .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+  .spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
   }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
   /* Modal */
   .modal-overlay {
     display: none;
@@ -193,10 +189,10 @@
     max-height: 90vh;
     overflow: auto;
   }
-  .modal h3 {
-    margin: 0 0 16px;
-    font-size: 18px;
-  }
+  .modal.modal-wide { max-width: 560px; }
+  .modal .field { margin-bottom: 14px; }
+  .modal textarea { min-height: 140px; }
+  .modal h3 { margin: 0 0 16px; font-size: 18px; }
   .phone-preview {
     background: #e9efff;
     border-radius: 18px;
@@ -245,6 +241,7 @@
     transition: all 0.25s;
     z-index: 200;
     pointer-events: none;
+    max-width: 90vw;
   }
   .toast.show {
     opacity: 1;
@@ -255,122 +252,367 @@
     color: var(--text-muted);
     margin-top: 4px;
   }
+
+  /* History section (table) */
+  .hp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 16px;
+    gap: 12px;
+  }
+  .hp-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+  }
+  .hp-header .sub {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-top: 2px;
+  }
+  .hp-clear {
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 12px;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+  }
+  .hp-clear:hover { color: var(--text); background: var(--secondary); }
+  .hp-stats {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .hp-stat {
+    flex: 1;
+    text-align: center;
+    padding: 10px 8px;
+    background: var(--secondary);
+    border-radius: 8px;
+  }
+  .hp-stat .num {
+    display: block;
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .hp-stat .lbl {
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+  .hp-table-wrap {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .hp-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12.5px;
+    table-layout: auto;
+  }
+  .hp-table thead th {
+    text-align: left;
+    background: #f9fafb;
+    color: var(--text-muted);
+    font-weight: 600;
+    font-size: 11.5px;
+    padding: 10px 10px;
+    border-bottom: 1px solid #e5e7eb;
+    white-space: nowrap;
+  }
+  .hp-table tbody td {
+    padding: 12px 10px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: top;
+    line-height: 1.5;
+  }
+  .hp-table tbody tr:last-child td { border-bottom: none; }
+  .hp-table tbody tr:hover { background: #fafbfc; }
+  /* width:1% + nowrap → 내용 폭만큼만 차지, 남는 공간은 flex 컬럼(title/detail)이 분배 */
+  .col-title    { min-width: 140px; }
+  .col-sender   { width: 1%; white-space: nowrap; }
+  .col-receiver { width: 1%; white-space: nowrap; }
+  .col-time     { width: 1%; white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .col-status   { width: 1%; white-space: nowrap; }
+  .col-detail   { min-width: 140px; }
+  .col-operator { width: 1%; white-space: nowrap; }
+  .col-actions  { width: 1%; text-align: right; white-space: nowrap; }
+
+  .td-title {
+    font-weight: 600;
+    color: var(--text);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+  }
+  .td-id {
+    display: block;
+    font-size: 10.5px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-variant-numeric: tabular-nums;
+  }
+  .td-detail.err { color: var(--danger); }
+  .hp-empty {
+    padding: 48px 16px;
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 13px;
+  }
+
+  .hi-btn {
+    padding: 4px 10px;
+    font-size: 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: #fff;
+    cursor: pointer;
+    color: var(--text);
+    margin-left: 4px;
+  }
+  .hi-btn:hover { background: var(--secondary); }
+  .hi-btn.primary {
+    background: var(--primary);
+    color: #fff;
+    border-color: var(--primary);
+  }
+  .hi-btn.primary:hover { background: var(--primary-hover); }
+
+  /* Status chips */
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    white-space: nowrap;
+  }
+  .chip .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+  }
+  .chip.sending  { background: #eff6ff; color: #1d4ed8; }
+  .chip.sending .dot { animation: pulse 1s ease-in-out infinite; }
+  @keyframes pulse { 50% { opacity: 0.3; } }
+  .chip.sent     { background: #e0f2fe; color: #0369a1; }
+  .chip.delivered{ background: #d1fae5; color: #047857; }
+  .chip.failed   { background: #fee2e2; color: #b91c1c; }
+  .chip.rejected { background: #fef3c7; color: #b45309; }
+  .chip.scheduled{ background: #ede9fe; color: #6d28d9; }
+  .chip.canceled { background: #f3f4f6; color: #6b7280; }
+  .chip.queued   { background: #f3f4f6; color: #6b7280; }
 </style>
 </head>
 <body>
-  <div class="container">
-    <h1>SMS 발송기</h1>
-    <p class="subtitle">템플릿을 선택하여 빠르게 SMS를 발송하거나, 예약 발송을 설정할 수 있습니다.</p>
+<div class="page">
+  <div class="form-wrap">
+    <div class="container">
+      <h1>SMS 발송기</h1>
+      <p class="subtitle">템플릿을 선택하여 빠르게 SMS를 발송하거나, 예약 발송을 설정할 수 있습니다.</p>
 
-    <div class="field">
-      <label for="template" class="required">템플릿 선택</label>
-      <select id="template">
-        <option value="">-- 템플릿을 선택하세요 --</option>
-        <option value="overdue_notice">연체 안내 문자</option>
-        <option value="overdue_absent">연체자 부재시 안내 문자</option>
-        <option value="debt_collection">채권추심 위임 안내 문자</option>
-        <option value="custom">직접 작성</option>
-      </select>
+      <div class="field">
+        <label for="template" class="required">템플릿 선택</label>
+        <select id="template">
+          <option value="">-- 템플릿을 선택하세요 --</option>
+          <option value="overdue_notice">연체 안내 문자</option>
+          <option value="overdue_absent">연체자 부재시 안내 문자</option>
+          <option value="debt_collection">채권추심 위임 안내 문자</option>
+          <option value="custom">직접 작성</option>
+        </select>
+      </div>
+
+      <div class="field">
+        <label for="title" class="required">제목</label>
+        <input type="text" id="title" placeholder="제목을 입력하세요" maxlength="40" />
+      </div>
+
+      <div class="field">
+        <label for="content" class="required">내용</label>
+        <textarea id="content" placeholder="내용을 입력하세요. 우측 하단을 드래그하여 크기를 조정할 수 있습니다."></textarea>
+        <div class="char-count"><span id="charCount">0</span> / 90자 (LMS 전환: 90자 초과)</div>
+      </div>
+
+      <div class="row">
+        <div class="field">
+          <label for="sender" class="required">발신번호</label>
+          <input type="tel" id="sender" value="02-1234-5678" />
+        </div>
+        <div class="field">
+          <label for="receiver" class="required">수신번호</label>
+          <input type="tel" id="receiver" value="010-9876-5432" />
+        </div>
+      </div>
+
+      <div class="field">
+        <label>발송 방법</label>
+        <div class="radio-group">
+          <label class="radio-option active" id="optImmediate">
+            <input type="radio" name="sendType" value="immediate" checked />
+            즉시 발송
+          </label>
+          <label class="radio-option" id="optScheduled">
+            <input type="radio" name="sendType" value="scheduled" />
+            예약 발송
+          </label>
+        </div>
+
+        <div class="schedule-box" id="scheduleBox">
+          <div class="schedule-row">
+            <div>
+              <label for="schedDate">예약일</label>
+              <input type="date" id="schedDate" />
+            </div>
+            <div>
+              <label for="schedMeridian">오전/오후</label>
+              <select id="schedMeridian">
+                <option value="AM">오전</option>
+                <option value="PM">오후</option>
+              </select>
+            </div>
+            <div>
+              <label for="schedTime">시간 (hh:mm)</label>
+              <input type="time" id="schedTime" value="09:00" />
+            </div>
+          </div>
+          <p class="help">선택한 날짜와 시간에 자동으로 발송됩니다. 과거 시점은 선택할 수 없습니다.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button class="btn-secondary" id="btnPreview">미리보기</button>
+        <button class="btn-primary" id="btnSend">
+          <span id="btnSendLabel">보내기</span>
+        </button>
+      </div>
     </div>
+  </div>
 
-    <div class="field">
-      <label for="title" class="required">제목</label>
-      <input type="text" id="title" placeholder="제목을 입력하세요" maxlength="40" />
+  <!-- History Section (별도 페이지로 분리될 예시) -->
+  <section class="history-section">
+    <div class="hp-header">
+      <div>
+        <h2>발송 이력</h2>
+        <div class="sub">실제 배포 시 별도 페이지로 분리되는 영역의 프로토타입입니다.</div>
+      </div>
     </div>
-
-    <div class="field">
-      <label for="content" class="required">내용</label>
-      <textarea id="content" placeholder="내용을 입력하세요. 우측 하단을 드래그하여 크기를 조정할 수 있습니다."></textarea>
-      <div class="char-count"><span id="charCount">0</span> / 90자 (LMS 전환: 90자 초과)</div>
+    <div class="hp-stats">
+      <div class="hp-stat"><span class="num" id="statTotal">0</span><span class="lbl">전체</span></div>
+      <div class="hp-stat"><span class="num" id="statPending">0</span><span class="lbl">진행 중</span></div>
+      <div class="hp-stat"><span class="num" id="statDelivered">0</span><span class="lbl">전달 완료</span></div>
+      <div class="hp-stat"><span class="num" id="statFailed">0</span><span class="lbl">실패</span></div>
     </div>
+    <div class="hp-table-wrap">
+      <table class="hp-table">
+        <thead>
+          <tr>
+            <th class="col-title">타이틀</th>
+            <th class="col-sender">발신번호</th>
+            <th class="col-receiver">수신번호</th>
+            <th class="col-time">발신시간</th>
+            <th class="col-status">발송상태</th>
+            <th class="col-detail">발송상태 상세</th>
+            <th class="col-operator">발신자</th>
+            <th class="col-actions">액션</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody">
+          <tr><td colspan="8" class="hp-empty">아직 발송 내역이 없습니다.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</div>
 
+<!-- Preview Modal -->
+<div class="modal-overlay" id="previewModal">
+  <div class="modal">
+    <h3>SMS 미리보기</h3>
+    <div class="phone-preview">
+      <div class="meta">
+        발신: <span id="pvSender"></span> → 수신: <span id="pvReceiver"></span>
+      </div>
+      <div class="sms-bubble">
+        <div class="title" id="pvTitle"></div>
+        <div class="body" id="pvBody"></div>
+      </div>
+      <div class="meta" style="margin-top: 10px;">
+        발송 시점: <span id="pvWhen"></span>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btnClosePreview">닫기</button>
+      <button class="btn-primary" id="btnSendFromPreview">바로 발송</button>
+    </div>
+  </div>
+</div>
+
+<!-- Edit Scheduled Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal modal-wide">
+    <h3>예약 발송 수정</h3>
+    <div class="field">
+      <label for="editTitle" class="required">제목</label>
+      <input type="text" id="editTitle" maxlength="40" />
+    </div>
+    <div class="field">
+      <label for="editContent" class="required">내용</label>
+      <textarea id="editContent"></textarea>
+    </div>
     <div class="row">
       <div class="field">
-        <label for="sender" class="required">발신번호</label>
-        <input type="tel" id="sender" value="02-1234-5678" />
+        <label for="editSender" class="required">발신번호</label>
+        <input type="tel" id="editSender" />
       </div>
       <div class="field">
-        <label for="receiver" class="required">수신번호</label>
-        <input type="tel" id="receiver" value="010-9876-5432" />
+        <label for="editReceiver" class="required">수신번호</label>
+        <input type="tel" id="editReceiver" />
       </div>
     </div>
-
     <div class="field">
-      <label>발송 방법</label>
-      <div class="radio-group">
-        <label class="radio-option active" id="optImmediate">
-          <input type="radio" name="sendType" value="immediate" checked />
-          즉시 발송
-        </label>
-        <label class="radio-option" id="optScheduled">
-          <input type="radio" name="sendType" value="scheduled" />
-          예약 발송
-        </label>
+      <label class="required">예약 시점</label>
+      <div class="schedule-row">
+        <input type="date" id="editSchedDate" />
+        <select id="editSchedMeridian">
+          <option value="AM">오전</option>
+          <option value="PM">오후</option>
+        </select>
+        <input type="time" id="editSchedTime" />
       </div>
-
-      <div class="schedule-box" id="scheduleBox">
-        <div class="schedule-row">
-          <div>
-            <label for="schedDate">예약일</label>
-            <input type="date" id="schedDate" />
-          </div>
-          <div>
-            <label for="schedMeridian">오전/오후</label>
-            <select id="schedMeridian">
-              <option value="AM">오전</option>
-              <option value="PM">오후</option>
-            </select>
-          </div>
-          <div>
-            <label for="schedTime">시간 (hh:mm)</label>
-            <input type="time" id="schedTime" value="09:00" />
-          </div>
-        </div>
-        <p class="help">선택한 날짜와 시간에 자동으로 발송됩니다. 과거 시점은 선택할 수 없습니다.</p>
-      </div>
+      <p class="help">과거 시점은 선택할 수 없습니다.</p>
     </div>
-
-    <div class="actions">
-      <button class="btn-secondary" id="btnPreview">미리보기</button>
-      <button class="btn-primary" id="btnSend">보내기</button>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="btnCancelEdit">취소</button>
+      <button class="btn-primary" id="btnSaveEdit">저장</button>
     </div>
   </div>
+</div>
 
-  <!-- Preview Modal -->
-  <div class="modal-overlay" id="previewModal">
-    <div class="modal">
-      <h3>SMS 미리보기</h3>
-      <div class="phone-preview">
-        <div class="meta">
-          발신: <span id="pvSender"></span> → 수신: <span id="pvReceiver"></span>
-        </div>
-        <div class="sms-bubble">
-          <div class="title" id="pvTitle"></div>
-          <div class="body" id="pvBody"></div>
-        </div>
-        <div class="meta" style="margin-top: 10px;">
-          발송 시점: <span id="pvWhen"></span>
-        </div>
-      </div>
-      <div class="modal-actions">
-        <button class="btn-secondary" id="btnClosePreview">닫기</button>
-        <button class="btn-primary" id="btnSendFromPreview">바로 발송</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="toast" id="toast"></div>
+<div class="toast" id="toast"></div>
 
 <script>
   // -- Mock data for template variables --
-  // (실제 운영 환경에서는 고객 DB / 대출 시스템에서 조회한 값으로 대체)
   const mockCustomer = {
-    name: "홍길동",                          // ${it.name}
-    overdueDays: 7,                          // n일
-    unpaidAmount: 1234567,                   // 미납 금액(원, 정수)
-    accountNumber: "110-123-456789",         // $accountNumber (신한은행 입금전용계좌)
-    transferDate: addDaysISO(3),             // 이관 일시 yyyy-mm-dd (오늘 + 3일)
+    name: "홍길동",
+    overdueDays: 7,
+    unpaidAmount: 1234567,
+    accountNumber: "110-123-456789",
+    transferDate: addDaysISO(3),
   };
+
+  // 발송 이력의 '발신자' 필드 mock — 실제 운영에서는 로그인 세션의 운영자 정보로 주입
+  const operatorLabel = "관리자";
 
   function today() {
     const d = new Date();
@@ -379,28 +621,22 @@
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}년 ${m}월 ${day}일`;
   }
-
-  // 로컬 타임존 기준 YYYY-MM-DD
   function localISODate(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
     const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   }
-
   function addDaysISO(days) {
     const d = new Date();
     d.setDate(d.getDate() + days);
     return localISODate(d);
   }
-
-  // FormatterUtil.toNumFormat(unpaidAmount) — 천 단위 콤마
   function toNumFormat(n) {
     return Number(n).toLocaleString("ko-KR");
   }
 
   const templates = {
-    // 연체 안내 문자
     overdue_notice: {
       title: `[${mockCustomer.name} 님, ${mockCustomer.overdueDays}일차 CMS 미출금 및 연체 안내]`,
       body:
@@ -409,8 +645,6 @@
 ▶입금전용계좌 : 신한은행 / ${mockCustomer.accountNumber} / ${mockCustomer.name}
 (주의: 원단위까지 정확하게, 08시~21시까지 입금처리하셔야 상환처리 가능합니다) ※이미 납부 완료하셨다면 양해 부탁 드립니다.`,
     },
-
-    // 연체자 부재시 안내 문자
     overdue_absent: {
       title: `[연체자 연락 부재 안내]`,
       body:
@@ -424,8 +658,6 @@
 금융을 정직하게 바꿉니다.
 어니스트펀드`,
     },
-
-    // 채권추심 위임 안내 문자
     debt_collection: {
       title: `[채권추심 위임 안내]`,
       body:
@@ -439,16 +671,12 @@
 금융을 정직하게 바꿉니다.
 어니스트펀드`,
     },
-
-    custom: {
-      title: "",
-      body: "",
-    },
+    custom: { title: "", body: "" },
   };
 
   const $ = (id) => document.getElementById(id);
 
-  // -- Template selection --
+  // ===================== 폼 동작 =====================
   $("template").addEventListener("change", (e) => {
     const t = templates[e.target.value];
     if (!t) return;
@@ -457,17 +685,14 @@
     updateCharCount();
   });
 
-  // -- Character count --
   function updateCharCount() {
     $("charCount").textContent = $("content").value.length;
   }
   $("content").addEventListener("input", updateCharCount);
 
-  // -- Send type radio --
   const optImmediate = $("optImmediate");
   const optScheduled = $("optScheduled");
   const scheduleBox = $("scheduleBox");
-
   document.querySelectorAll('input[name="sendType"]').forEach((r) => {
     r.addEventListener("change", () => {
       const isScheduled = r.value === "scheduled" && r.checked;
@@ -477,18 +702,15 @@
     });
   });
 
-  // 예약일 초기화: min = 오늘, 기본값 = 내일 (과거 선택 차단)
+  // 예약일 초기화
   (function () {
     const now = new Date();
-    const todayStr = localISODate(now);
     const tomorrow = new Date();
     tomorrow.setDate(now.getDate() + 1);
     const schedDate = $("schedDate");
-    schedDate.min = todayStr;        // datepicker에서 과거 날짜 비활성화
+    schedDate.min = localISODate(now);
     schedDate.value = localISODate(tomorrow);
   })();
-
-  // 사용자가 직접 과거 날짜를 타이핑/붙여넣기 하는 경우에도 차단
   $("schedDate").addEventListener("change", (e) => {
     const todayStr = localISODate(new Date());
     if (e.target.value && e.target.value < todayStr) {
@@ -497,7 +719,6 @@
     }
   });
 
-  // -- Validation helper --
   function getFormData() {
     return {
       title: $("title").value.trim(),
@@ -510,7 +731,6 @@
       schedTime: $("schedTime").value,
     };
   }
-
   function validate(data) {
     if (!data.title) return "제목을 입력해주세요.";
     if (!data.content) return "내용을 입력해주세요.";
@@ -519,32 +739,31 @@
     if (data.sendType === "scheduled") {
       if (!data.schedDate) return "예약일을 선택해주세요.";
       if (!data.schedTime) return "예약 시간을 입력해주세요.";
-      // 과거 시점(날짜+시간) 차단
-      const [hh, mm] = data.schedTime.split(":").map(Number);
-      let hour24 = hh % 12;
-      if (data.schedMeridian === "PM") hour24 += 12;
-      const target = new Date(data.schedDate + "T00:00:00");
-      target.setHours(hour24, mm, 0, 0);
-      if (target.getTime() <= Date.now())
+      if (computeScheduledTime(data) <= Date.now())
         return "예약 시점은 현재 이후로 설정해주세요.";
     }
     return null;
   }
-
+  function computeScheduledTime(data) {
+    const [hh, mm] = data.schedTime.split(":").map(Number);
+    let hour24 = hh % 12;
+    if (data.schedMeridian === "PM") hour24 += 12;
+    const target = new Date(data.schedDate + "T00:00:00");
+    target.setHours(hour24, mm, 0, 0);
+    return target.getTime();
+  }
   function describeWhen(data) {
     if (data.sendType === "immediate") return "즉시 발송";
     const [hh, mm] = data.schedTime.split(":");
-    return `${data.schedDate} ${data.schedMeridian === "AM" ? "오전" : "오후"} ${hh}:${mm}`;
+    const date = data.schedDate.replace(/-/g, "/"); // YYYY-MM-DD → YYYY/MM/DD
+    return `${date} ${data.schedMeridian === "AM" ? "오전" : "오후"} ${hh}:${mm}`;
   }
 
-  // -- Preview --
+  // ===================== 미리보기 =====================
   $("btnPreview").addEventListener("click", () => {
     const data = getFormData();
     const err = validate(data);
-    if (err) {
-      showToast(err);
-      return;
-    }
+    if (err) { showToast(err); return; }
     $("pvTitle").textContent = data.title;
     $("pvBody").textContent = data.content;
     $("pvSender").textContent = data.sender;
@@ -552,46 +771,448 @@
     $("pvWhen").textContent = describeWhen(data);
     $("previewModal").classList.add("show");
   });
-
-  $("btnClosePreview").addEventListener("click", () => {
-    $("previewModal").classList.remove("show");
-  });
-
+  $("btnClosePreview").addEventListener("click", () =>
+    $("previewModal").classList.remove("show"));
   $("previewModal").addEventListener("click", (e) => {
     if (e.target.id === "previewModal")
       $("previewModal").classList.remove("show");
   });
 
-  // -- Send --
+  // ===================== 발송 이력 (DLR 시뮬레이션) =====================
+  /*
+   * 상태 머신:
+   *   QUEUED   → 발송 요청 직전
+   *   SENDING  → SMS 서버에 요청 전송 중 (지수 백오프 재시도 포함)
+   *   SENT     → 서버 접수 성공
+   *   DELIVERED→ DLR로 단말 수신 확인
+   *   FAILED   → DLR로 단말 미수신 또는 자동 재시도 소진
+   *   REJECTED → 서버에서 거부 (검증 실패 등 영구 실패)
+   *   SCHEDULED→ 예약 큐에서 대기 중
+   *   CANCELED → 사용자가 취소
+   */
+
+  const STATUS_LABELS = {
+    QUEUED:    "대기 중",
+    SENDING:   "발송 중",
+    SENT:      "서버 접수",
+    DELIVERED: "전달 완료",
+    FAILED:    "전송 실패",
+    REJECTED:  "거부됨",
+    SCHEDULED: "예약됨",
+    CANCELED:  "취소됨",
+  };
+  const STATUS_CLASS = {
+    QUEUED: "queued", SENDING: "sending", SENT: "sent",
+    DELIVERED: "delivered", FAILED: "failed", REJECTED: "rejected",
+    SCHEDULED: "scheduled", CANCELED: "canceled",
+  };
+
+  const history = []; // newest first
+  const scheduledTimeouts = new Map(); // 예약 발송 자동 트리거 timeoutId 보관(수정/취소 시 해제)
+
+  function shortId() {
+    return "MSG-" + (Date.now().toString(36) + Math.random().toString(36).slice(2, 5)).toUpperCase();
+  }
+  function formatTime(ts) {
+    const d = new Date(ts);
+    return `${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}:${String(d.getSeconds()).padStart(2,"0")}`;
+  }
+  function formatDateTime(ts) {
+    const d = new Date(ts);
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${mm}/${dd} ${formatTime(ts)}`;
+  }
+
+  // 발신시간 — 예약은 예약 시점, 그 외는 요청 시각
+  function getSendTime(h) {
+    if (h.status === "SCHEDULED") return h.scheduledLabel;
+    return formatDateTime(h.createdAt);
+  }
+  // 발송상태 상세
+  function getStatusDetail(h) {
+    switch (h.status) {
+      case "QUEUED":    return "발송 큐 대기 중";
+      case "SENDING":   return h.errorMessage || `서버 요청 중 (시도 ${h.attempt || 1}/3)`;
+      case "SENT":      return `서버 접수 완료 · ${h.providerId || h.id}`;
+      case "DELIVERED": return `단말 수신 확인 · ${formatTime(h.deliveredAt)}`;
+      case "FAILED":    return h.errorMessage || "전송 실패";
+      case "REJECTED":  return h.errorMessage || "발송 거부됨";
+      case "SCHEDULED": return `예약 발송 대기`;
+      case "CANCELED":  return "예약 발송이 취소되었습니다";
+      default:          return "-";
+    }
+  }
+
+  function renderHistory() {
+    const tbody = $("historyBody");
+    tbody.innerHTML = "";
+    if (history.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="8" class="hp-empty">아직 발송 내역이 없습니다.</td></tr>';
+    } else {
+      history.forEach((h) => tbody.appendChild(renderRow(h)));
+    }
+    // stats
+    $("statTotal").textContent = history.length;
+    $("statPending").textContent = history.filter((h) =>
+      ["QUEUED", "SENDING", "SENT", "SCHEDULED"].includes(h.status)).length;
+    $("statDelivered").textContent = history.filter((h) => h.status === "DELIVERED").length;
+    $("statFailed").textContent = history.filter((h) =>
+      ["FAILED", "REJECTED"].includes(h.status)).length;
+  }
+
+  function renderRow(h) {
+    const tr = document.createElement("tr");
+    tr.dataset.id = h.id;
+    const cls = STATUS_CLASS[h.status] || "queued";
+    const label = STATUS_LABELS[h.status] || h.status;
+    const isErr = ["FAILED", "REJECTED"].includes(h.status);
+
+    tr.innerHTML = `
+      <td class="col-title">
+        <div class="td-title" title="${escapeAttr(h.title)}">${escapeHtml(h.title || "(제목 없음)")}</div>
+      </td>
+      <td class="col-sender">${escapeHtml(h.sender)}</td>
+      <td class="col-receiver">${escapeHtml(h.receiver)}</td>
+      <td class="col-time">${escapeHtml(getSendTime(h))}</td>
+      <td class="col-status"><span class="chip ${cls}"><span class="dot"></span>${label}</span></td>
+      <td class="col-detail td-detail ${isErr ? "err" : ""}">${escapeHtml(getStatusDetail(h))}</td>
+      <td class="col-operator">${escapeHtml(h.operator || "-")}</td>
+      <td class="col-actions"></td>
+    `;
+
+    const actions = tr.querySelector(".col-actions");
+    if (h.status === "FAILED" || h.status === "REJECTED") {
+      const btn = document.createElement("button");
+      btn.className = "hi-btn primary";
+      btn.textContent = "재발송";
+      btn.onclick = () => resend(h.id);
+      actions.appendChild(btn);
+    }
+    if (h.status === "SCHEDULED") {
+      const btnEdit = document.createElement("button");
+      btnEdit.className = "hi-btn primary";
+      btnEdit.textContent = "수정";
+      btnEdit.onclick = () => openEdit(h.id);
+      const btnNow = document.createElement("button");
+      btnNow.className = "hi-btn";
+      btnNow.textContent = "지금 발송";
+      btnNow.onclick = () => fireScheduled(h.id);
+      const btnCancel = document.createElement("button");
+      btnCancel.className = "hi-btn";
+      btnCancel.textContent = "취소";
+      btnCancel.onclick = () => cancelScheduled(h.id);
+      actions.appendChild(btnEdit);
+      actions.appendChild(btnNow);
+      actions.appendChild(btnCancel);
+    }
+    if (actions.children.length === 0) actions.textContent = "-";
+    return tr;
+  }
+
+  function escapeHtml(s) {
+    return String(s ?? "").replace(/[&<>"']/g, (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  function updateItem(id, patch) {
+    const idx = history.findIndex((h) => h.id === id);
+    if (idx < 0) return;
+    history[idx] = { ...history[idx], ...patch };
+    renderHistory();
+  }
+
+  // -- 실제 API 호출을 시뮬레이션 --
+  function simulateApiCall() {
+    return new Promise((resolve, reject) => {
+      const latency = 600 + Math.random() * 800;
+      setTimeout(() => {
+        const r = Math.random();
+        if (r < 0.65) {
+          resolve({ provider_message_id: "PVD-" + Math.random().toString(36).slice(2, 10).toUpperCase() });
+        } else if (r < 0.80) {
+          reject({ retryable: true, code: 429, message: "요청량 초과 (rate limit)" });
+        } else if (r < 0.90) {
+          reject({ retryable: true, code: 502, message: "게이트웨이 오류 (5xx)" });
+        } else if (r < 0.97) {
+          reject({ retryable: false, code: 400, message: "수신번호 형식 오류 또는 차단된 번호" });
+        } else {
+          reject({ retryable: false, code: 403, message: "발신번호 미등록 / 인증 실패" });
+        }
+      }, latency);
+    });
+  }
+
+  async function sendWithRetry(id, attempt = 1) {
+    updateItem(id, { status: "SENDING", errorMessage: null, attempt });
+    try {
+      const res = await simulateApiCall();
+      updateItem(id, {
+        status: "SENT",
+        sentAt: Date.now(),
+        providerId: res.provider_message_id,
+      });
+      scheduleDlr(id);
+    } catch (err) {
+      if (err.retryable && attempt < 3) {
+        const backoff = Math.pow(3, attempt - 1) * 1000;
+        updateItem(id, {
+          status: "SENDING",
+          errorMessage: `${err.message} — ${backoff/1000}초 후 재시도 (${attempt}/3)`,
+        });
+        setTimeout(() => sendWithRetry(id, attempt + 1), backoff);
+      } else if (err.retryable) {
+        updateItem(id, {
+          status: "FAILED",
+          errorMessage: `자동 재시도 실패: ${err.message} (재시도 3회 소진)`,
+        });
+      } else {
+        updateItem(id, {
+          status: "REJECTED",
+          errorMessage: `발송 거부: ${err.message} (코드 ${err.code})`,
+        });
+      }
+    }
+  }
+
+  function scheduleDlr(id) {
+    const delay = 1500 + Math.random() * 3500;
+    setTimeout(() => {
+      const item = history.find((h) => h.id === id);
+      if (!item || item.status !== "SENT") return;
+      const r = Math.random();
+      if (r < 0.80) {
+        updateItem(id, { status: "DELIVERED", deliveredAt: Date.now() });
+      } else if (r < 0.92) {
+        updateItem(id, {
+          status: "FAILED",
+          errorMessage: "단말 미수신 (수신측 단말 꺼짐/음영지역)",
+        });
+      } else {
+        updateItem(id, {
+          status: "REJECTED",
+          errorMessage: "통신사 거부 (결번 또는 수신거부)",
+        });
+      }
+    }, delay);
+  }
+
+  // ===================== 발송 진입점 =====================
+  let sending = false;
+
   function doSend() {
+    if (sending) return;
     const data = getFormData();
     const err = validate(data);
-    if (err) {
-      showToast(err);
+    if (err) { showToast(err); return; }
+
+    sending = true;
+    setSendButton(true);
+
+    const id = shortId();
+    const baseItem = {
+      id,
+      title: data.title,
+      content: data.content,
+      sender: data.sender,
+      receiver: data.receiver,
+      operator: operatorLabel,
+      createdAt: Date.now(),
+    };
+
+    if (data.sendType === "scheduled") {
+      const scheduledAt = computeScheduledTime(data);
+      history.unshift({
+        ...baseItem,
+        status: "SCHEDULED",
+        scheduledAt,
+        scheduledLabel: describeWhen(data),
+      });
+      renderHistory();
+      showToast(`예약 완료: ${describeWhen(data)}`, true);
+      sending = false;
+      setSendButton(false);
+      $("previewModal").classList.remove("show");
+      armScheduledTimer(id, scheduledAt);
+    } else {
+      history.unshift({ ...baseItem, status: "QUEUED" });
+      renderHistory();
+      showToast("발송 요청 접수 중…");
+      $("previewModal").classList.remove("show");
+      sendWithRetry(id).finally(() => {
+        sending = false;
+        setSendButton(false);
+        const finalItem = history.find((h) => h.id === id);
+        if (finalItem && finalItem.status === "SENT") {
+          showToast(`서버 접수 완료 (${id})`, true);
+        } else if (finalItem && (finalItem.status === "FAILED" || finalItem.status === "REJECTED")) {
+          showToast(`발송 실패: ${finalItem.errorMessage}`, false);
+        }
+      });
+    }
+  }
+
+  function setSendButton(loading) {
+    const btn = $("btnSend");
+    const lbl = $("btnSendLabel");
+    btn.disabled = loading;
+    if (loading) {
+      lbl.innerHTML = '<span class="spinner"></span> 발송 중...';
+    } else {
+      lbl.textContent = "보내기";
+    }
+  }
+
+  function resend(id) {
+    const item = history.find((h) => h.id === id);
+    if (!item) return;
+    const newId = shortId();
+    history.unshift({
+      id: newId,
+      title: item.title,
+      content: item.content,
+      sender: item.sender,
+      receiver: item.receiver,
+      operator: operatorLabel,
+      createdAt: Date.now(),
+      status: "QUEUED",
+      retryOf: id,
+    });
+    renderHistory();
+    showToast(`재발송 시작: ${newId}`);
+    sendWithRetry(newId);
+  }
+
+  function armScheduledTimer(id, scheduledAt) {
+    clearScheduledTimer(id);
+    const delay = Math.max(0, scheduledAt - Date.now());
+    const tid = setTimeout(() => fireScheduled(id), delay);
+    scheduledTimeouts.set(id, tid);
+  }
+  function clearScheduledTimer(id) {
+    if (scheduledTimeouts.has(id)) {
+      clearTimeout(scheduledTimeouts.get(id));
+      scheduledTimeouts.delete(id);
+    }
+  }
+
+  function fireScheduled(id) {
+    const item = history.find((h) => h.id === id);
+    if (!item || item.status !== "SCHEDULED") return;
+    clearScheduledTimer(id);
+    updateItem(id, { status: "QUEUED" });
+    sendWithRetry(id);
+  }
+
+  function cancelScheduled(id) {
+    clearScheduledTimer(id);
+    updateItem(id, { status: "CANCELED" });
+    showToast("예약이 취소되었습니다.");
+  }
+
+  // ===================== 예약 발송 수정 모달 =====================
+  let editingId = null;
+
+  function openEdit(id) {
+    const item = history.find((h) => h.id === id);
+    if (!item || item.status !== "SCHEDULED") return;
+    editingId = id;
+
+    $("editTitle").value = item.title;
+    $("editContent").value = item.content;
+    $("editSender").value = item.sender;
+    $("editReceiver").value = item.receiver;
+
+    // 기존 예약 시점을 분해해서 입력 필드에 채움
+    const d = new Date(item.scheduledAt);
+    $("editSchedDate").value = localISODate(d);
+    $("editSchedDate").min = localISODate(new Date());
+    const h24 = d.getHours();
+    const meridian = h24 >= 12 ? "PM" : "AM";
+    const h12 = ((h24 + 11) % 12) + 1;
+    $("editSchedMeridian").value = meridian;
+    $("editSchedTime").value =
+      `${String(h12).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+
+    $("editModal").classList.add("show");
+  }
+
+  function closeEdit() {
+    editingId = null;
+    $("editModal").classList.remove("show");
+  }
+
+  function saveEdit() {
+    if (!editingId) return;
+    const item = history.find((h) => h.id === editingId);
+    if (!item || item.status !== "SCHEDULED") {
+      showToast("수정할 수 없는 항목입니다.");
+      closeEdit();
       return;
     }
-    const when = describeWhen(data);
-    const msg =
-      data.sendType === "immediate"
-        ? `발송 완료! (수신: ${data.receiver})`
-        : `예약 완료: ${when}`;
-    showToast(msg, true);
-    $("previewModal").classList.remove("show");
+
+    const next = {
+      title: $("editTitle").value.trim(),
+      content: $("editContent").value.trim(),
+      sender: $("editSender").value.trim(),
+      receiver: $("editReceiver").value.trim(),
+      sendType: "scheduled",
+      schedDate: $("editSchedDate").value,
+      schedMeridian: $("editSchedMeridian").value,
+      schedTime: $("editSchedTime").value,
+    };
+
+    const err = validate(next);
+    if (err) { showToast(err); return; }
+
+    const scheduledAt = computeScheduledTime(next);
+    updateItem(editingId, {
+      title: next.title,
+      content: next.content,
+      sender: next.sender,
+      receiver: next.receiver,
+      scheduledAt,
+      scheduledLabel: describeWhen(next),
+    });
+    armScheduledTimer(editingId, scheduledAt);
+    showToast(`예약 수정 완료: ${describeWhen(next)}`, true);
+    closeEdit();
   }
+
+  // 과거 날짜 직접 입력 차단 (수정 모달)
+  document.addEventListener("DOMContentLoaded", () => {});
+  // 모달 외부 클릭 / 버튼
+  $("editModal").addEventListener("click", (e) => {
+    if (e.target.id === "editModal") closeEdit();
+  });
+  $("btnCancelEdit").addEventListener("click", closeEdit);
+  $("btnSaveEdit").addEventListener("click", saveEdit);
+  $("editSchedDate").addEventListener("change", (e) => {
+    const todayStr = localISODate(new Date());
+    if (e.target.value && e.target.value < todayStr) {
+      showToast("과거 날짜는 선택할 수 없습니다.");
+      e.target.value = todayStr;
+    }
+  });
 
   $("btnSend").addEventListener("click", doSend);
   $("btnSendFromPreview").addEventListener("click", doSend);
 
-  // -- Toast --
+  // ===================== Toast =====================
   let toastTimer;
   function showToast(message, success) {
     const el = $("toast");
     el.textContent = message;
-    el.style.background = success ? "#10b981" : "#111827";
+    if (success === true)      el.style.background = "#10b981";
+    else if (success === false) el.style.background = "#ef4444";
+    else                        el.style.background = "#111827";
     el.classList.add("show");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => el.classList.remove("show"), 2400);
+    toastTimer = setTimeout(() => el.classList.remove("show"), 2800);
   }
+
+  renderHistory();
 </script>
 </body>
 </html>
