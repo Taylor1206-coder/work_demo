@@ -782,7 +782,7 @@
   /*
    * 상태 머신:
    *   QUEUED   → 발송 요청 직전
-   *   SENDING  → SMS 서버에 요청 전송 중 (지수 백오프 재시도 포함)
+   *   SENDING  → SMS 서버에 요청 발송 중 (지수 백오프 재시도 포함)
    *   SENT     → 서버 접수 성공
    *   DELIVERED→ DLR로 단말 수신 확인
    *   FAILED   → DLR로 단말 미수신 또는 자동 재시도 소진
@@ -796,7 +796,7 @@
     SENDING:   "발송 중",
     SENT:      "서버 접수",
     DELIVERED: "전달 완료",
-    FAILED:    "전송 실패",
+    FAILED:    "발송 실패",
     REJECTED:  "거부됨",
     SCHEDULED: "예약됨",
     CANCELED:  "취소됨",
@@ -836,7 +836,7 @@
       case "SENDING":   return h.errorMessage || `서버 요청 중 (시도 ${h.attempt || 1}/3)`;
       case "SENT":      return `서버 접수 완료 · ${h.providerId || h.id}`;
       case "DELIVERED": return `단말 수신 확인 · ${formatTime(h.deliveredAt)}`;
-      case "FAILED":    return h.errorMessage || "전송 실패";
+      case "FAILED":    return h.errorMessage || "발송 실패";
       case "REJECTED":  return h.errorMessage || "발송 거부됨";
       case "SCHEDULED": return `예약 발송 대기`;
       case "CANCELED":  return "예약 발송이 취소되었습니다";
