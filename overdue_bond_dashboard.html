@@ -1,0 +1,2067 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>연체채권 모니터링 대시보드 — HonestFund</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117;
+    --bg2: #1a1d27;
+    --bg3: #22263a;
+    --border: #2e3350;
+    --text: #e8eaf6;
+    --text-muted: #8b90a8;
+    --accent: #6c7bff;
+    --accent2: #9b59b6;
+    --red: #e74c3c;
+    --orange: #e67e22;
+    --yellow: #f1c40f;
+    --green: #2ecc71;
+    --teal: #1abc9c;
+    --card-radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif; font-size: 13px; line-height: 1.5; }
+
+  /* ── 헤더 ── */
+  .header {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .header h1 { font-size: 16px; font-weight: 600; color: var(--text); letter-spacing: -0.3px; }
+  .header h1 span { color: var(--accent); }
+  .header-right { display: flex; align-items: center; gap: 16px; }
+  .badge-live { background: #e74c3c22; border: 1px solid var(--red); color: var(--red); padding: 2px 8px; border-radius: 20px; font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 4px; }
+  .badge-live::before { content: ''; width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: blink 1.4s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .date-label { color: var(--text-muted); font-size: 12px; }
+
+  /* ── 레이아웃 ── */
+  .main { padding: 20px 24px; max-width: 1600px; margin: 0 auto; }
+
+  /* ── KPI 카드 ── */
+  .kpi-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 12px; margin-bottom: 20px; }
+  .kpi-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    padding: 16px 18px;
+    position: relative;
+    overflow: hidden;
+  }
+  .kpi-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent-color, var(--accent));
+  }
+  .kpi-label { font-size: 11px; color: var(--text-muted); font-weight: 500; margin-bottom: 8px; }
+  .kpi-value { font-size: 22px; font-weight: 700; color: var(--text); line-height: 1; }
+  .kpi-sub { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
+  .kpi-change { font-size: 11px; margin-top: 4px; }
+  .kpi-change.up { color: var(--red); }
+  .kpi-change.down { color: var(--green); }
+
+  /* ── 섹션 카드 ── */
+  .section-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .section-title { font-size: 13px; font-weight: 600; color: var(--text); }
+  .section-subtitle { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── 그리드 레이아웃 ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .grid-3-1 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 16px; }
+
+  /* ── 차트 컨테이너 ── */
+  .chart-wrap { padding: 16px 18px; }
+  .chart-wrap canvas { max-height: 220px; }
+
+  /* ── 연체 구간 바 ── */
+  .overdue-bands { padding: 16px 18px; }
+  .band-row { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .band-label { width: 80px; font-size: 11px; color: var(--text-muted); flex-shrink: 0; }
+  .band-bar-bg { flex: 1; background: var(--bg3); border-radius: 4px; height: 22px; overflow: hidden; position: relative; }
+  .band-bar { height: 100%; border-radius: 4px; transition: width 0.8s ease; display: flex; align-items: center; padding-left: 8px; }
+  .band-bar span { font-size: 10px; font-weight: 600; color: #fff; white-space: nowrap; }
+  .band-count { width: 60px; text-align: right; font-size: 12px; font-weight: 600; }
+  .band-amount { width: 90px; text-align: right; font-size: 11px; color: var(--text-muted); }
+
+  /* ── 특수채권 타일 ── */
+  .special-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; padding: 16px 18px; }
+  .special-tile {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    position: relative;
+  }
+  .special-tile-type { font-size: 11px; color: var(--text-muted); margin-bottom: 6px; }
+  .special-tile-count { font-size: 20px; font-weight: 700; color: var(--text); }
+  .special-tile-amount { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .special-tile-badge {
+    position: absolute;
+    top: 10px; right: 10px;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  /* ── 상태 배지 ── */
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .s-130 { background: #2ecc7122; color: var(--green); border: 1px solid #2ecc7144; }
+  .s-120 { background: #e67e2222; color: var(--orange); border: 1px solid #e67e2244; }
+  .s-110 { background: #f1c40f22; color: var(--yellow); border: 1px solid #f1c40f44; }
+  .s-none { background: #e74c3c22; color: var(--red); border: 1px solid #e74c3c44; }
+  .s-normal { background: #6c7bff22; color: var(--accent); border: 1px solid #6c7bff44; }
+
+  /* ── 테이블 ── */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--bg3);
+    color: var(--text-muted);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 8px 12px;
+    text-align: left;
+    white-space: nowrap;
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: var(--bg3); }
+  tbody td { padding: 9px 12px; color: var(--text); white-space: nowrap; }
+  tbody td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  tbody td.muted { color: var(--text-muted); }
+  .overdue-days { font-weight: 700; }
+  .days-danger { color: var(--red); }
+  .days-warn { color: var(--orange); }
+  .days-caution { color: var(--yellow); }
+  .days-ok { color: var(--accent); }
+
+  /* ── 요약 테이블 ── */
+  .summary-table { padding: 16px 18px; }
+  .sum-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border); }
+  .sum-row:last-child { border-bottom: none; }
+  .sum-key { color: var(--text-muted); font-size: 12px; }
+  .sum-val { font-weight: 600; font-size: 13px; }
+
+  /* ── SQL 쿼리 패널 ── */
+  .sql-panel {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--card-radius);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .sql-header {
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    border-bottom: 1px solid transparent;
+  }
+  .sql-header.open { border-bottom-color: var(--border); }
+  .sql-header span { font-size: 12px; color: var(--text-muted); font-family: monospace; }
+  .sql-body { display: none; padding: 14px 16px; overflow-x: auto; }
+  .sql-body.open { display: block; }
+  pre { font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 11px; color: #abb2bf; line-height: 1.7; white-space: pre; }
+  .kw { color: #c678dd; }
+  .fn { color: #61afef; }
+  .str { color: #98c379; }
+  .cmt { color: #5c6370; font-style: italic; }
+  .num-lit { color: #d19a66; }
+
+  /* ── 탭 ── */
+  .tab-bar { display: flex; gap: 0; border-bottom: 1px solid var(--border); padding: 0 18px; }
+  .tab-btn {
+    padding: 10px 16px;
+    font-size: 12px;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.2s;
+  }
+  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+  .tab-pane { display: none; }
+  .tab-pane.active { display: block; }
+
+  /* ── 필터 바 ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 18px;
+    border-bottom: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+  .filter-label { font-size: 11px; color: var(--text-muted); }
+  .filter-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-muted);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .filter-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+  /* ── 진행률 바 ── */
+  .progress-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+  .progress-bar-bg { flex: 1; background: var(--bg3); border-radius: 3px; height: 6px; }
+  .progress-bar { height: 100%; border-radius: 3px; }
+
+  /* ── 페이지네이션 ── */
+  .pagination { display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding: 12px 18px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+  .page-btn { padding: 3px 8px; border: 1px solid var(--border); border-radius: 4px; cursor: pointer; background: transparent; color: var(--text-muted); }
+  .page-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ── 연체 예상 타임라인 ── */
+  .timeline { padding: 14px 18px; }
+  .tl-row { display: flex; align-items: flex-start; gap: 12px; margin-bottom: 14px; }
+  .tl-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; margin-top: 3px; }
+  .tl-content .tl-title { font-size: 12px; font-weight: 600; }
+  .tl-content .tl-desc { font-size: 11px; color: var(--text-muted); margin-top: 2px; }
+
+  .section-mb { margin-bottom: 16px; }
+  .text-right { text-align: right; }
+  .font-mono { font-family: monospace; font-size: 11px; }
+  .chip { display: inline-block; padding: 1px 7px; border-radius: 8px; font-size: 10px; background: var(--bg3); border: 1px solid var(--border); color: var(--text-muted); }
+</style>
+</head>
+<body>
+
+<!-- ── 헤더 ── -->
+<div class="header">
+  <div>
+    <h1>연체채권 모니터링 <span>대시보드</span></h1>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:2px;">HonestFund · 사후관리팀 · 개인신용대출 포트폴리오</div>
+  </div>
+  <div class="header-right">
+    <div class="badge-live">LIVE</div>
+    <div class="date-label">기준일: 2026-06-26 09:00</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- ── KPI 카드 ── -->
+  <div class="kpi-grid">
+    <div class="kpi-card" style="--accent-color: var(--red)">
+      <div class="kpi-label">총 연체채권 (활성)</div>
+      <div class="kpi-value">77건</div>
+      <div class="kpi-sub">NPL 매각 제외 기준</div>
+      <div class="kpi-change up">▲ 3건 (전일 대비)</div>
+    </div>
+    <div class="kpi-card" style="--accent-color: var(--orange)">
+      <div class="kpi-label">총 연체 잔여원금</div>
+      <div class="kpi-value">28.4억</div>
+      <div class="kpi-sub">2,843,210,000원</div>
+      <div class="kpi-change up">▲ 0.3억 (전일 대비)</div>
+    </div>
+    <div class="kpi-card" style="--accent-color: var(--yellow)">
+      <div class="kpi-label">30일 이상 연체</div>
+      <div class="kpi-value">62건</div>
+      <div class="kpi-sub">매각 검토 대상</div>
+      <div class="kpi-change up">▲ 2건 (전일 대비)</div>
+    </div>
+    <div class="kpi-card" style="--accent-color: #9b59b6)">
+      <div class="kpi-label">특수채권 (전체)</div>
+      <div class="kpi-value">31건</div>
+      <div class="kpi-sub">개인회생/파산/신복 포함</div>
+      <div class="kpi-change down">▼ 1건 (면책 완료)</div>
+    </div>
+    <div class="kpi-card" style="--accent-color: var(--teal)">
+      <div class="kpi-label">예상 매각 총액</div>
+      <div class="kpi-value">7.9억</div>
+      <div class="kpi-sub">가중 매각가 합산</div>
+      <div class="kpi-change down" style="color:var(--teal)">— 변동없음</div>
+    </div>
+    <div class="kpi-card" style="--accent-color: var(--green)">
+      <div class="kpi-label">금일 상환 예정</div>
+      <div class="kpi-value">12건</div>
+      <div class="kpi-sub" style="line-height:1.6">
+        b_repayment_charged<br>
+        adjusted_repayment_date = 오늘
+      </div>
+      <div style="margin-top:6px;font-size:11px;color:var(--green);font-weight:600">예정액 합산 1.2억</div>
+      <div style="margin-top:3px;font-size:10px;color:var(--text-muted)">※ 실적은 +1 영업일 확정<br>(tb_cms_withdraw_result)</div>
+    </div>
+  </div>
+
+  <!-- ── 연체 구간 + 차트 ── -->
+  <div class="grid-3-1 section-mb">
+    <!-- 연체구간별 분포 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">연체 구간별 현황</div>
+          <div class="section-subtitle">tb_lo_bond.overdue_start_date 기준 · major_state_code IN ('08','19')</div>
+        </div>
+      </div>
+      <div class="overdue-bands">
+        <div class="band-row">
+          <div class="band-label">D+1 ~ 29</div>
+          <div class="band-bar-bg">
+            <div class="band-bar" style="width:19.5%;background:linear-gradient(90deg,#3498db,#5dade2)">
+              <span>15건</span>
+            </div>
+          </div>
+          <div class="band-count" style="color:#5dade2">15</div>
+          <div class="band-amount">3.8억</div>
+        </div>
+        <div class="band-row">
+          <div class="band-label">D+30 ~ 59</div>
+          <div class="band-bar-bg">
+            <div class="band-bar" style="width:27.3%;background:linear-gradient(90deg,#f39c12,#f1c40f)">
+              <span>21건</span>
+            </div>
+          </div>
+          <div class="band-count" style="color:#f1c40f">21</div>
+          <div class="band-amount">7.1억</div>
+        </div>
+        <div class="band-row">
+          <div class="band-label">D+60 ~ 89</div>
+          <div class="band-bar-bg">
+            <div class="band-bar" style="width:22.1%;background:linear-gradient(90deg,#e67e22,#e74c3c)">
+              <span>17건</span>
+            </div>
+          </div>
+          <div class="band-count" style="color:#e67e22">17</div>
+          <div class="band-amount">5.9억</div>
+        </div>
+        <div class="band-row">
+          <div class="band-label">D+90 ~ 179</div>
+          <div class="band-bar-bg">
+            <div class="band-bar" style="width:14.3%;background:linear-gradient(90deg,#e74c3c,#c0392b)">
+              <span>11건</span>
+            </div>
+          </div>
+          <div class="band-count" style="color:#e74c3c">11</div>
+          <div class="band-amount">4.2억</div>
+        </div>
+        <div class="band-row">
+          <div class="band-label">D+180 이상</div>
+          <div class="band-bar-bg">
+            <div class="band-bar" style="width:16.9%;background:linear-gradient(90deg,#8e44ad,#9b59b6)">
+              <span>13건 (장기연체)</span>
+            </div>
+          </div>
+          <div class="band-count" style="color:#9b59b6">13</div>
+          <div class="band-amount">7.4억</div>
+        </div>
+
+        <div style="margin-top:16px; padding-top:14px; border-top: 1px solid var(--border);">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">📊 연체구간 비율</div>
+          <div style="display:flex;gap:0;border-radius:6px;overflow:hidden;height:10px;">
+            <div style="width:19.5%;background:#5dade2;" title="D1-29"></div>
+            <div style="width:27.3%;background:#f1c40f;" title="D30-59"></div>
+            <div style="width:22.1%;background:#e67e22;" title="D60-89"></div>
+            <div style="width:14.3%;background:#e74c3c;" title="D90-179"></div>
+            <div style="width:16.9%;background:#9b59b6;" title="D180+"></div>
+          </div>
+          <div style="display:flex;gap:12px;margin-top:8px;flex-wrap:wrap;">
+            <span style="font-size:10px;color:#5dade2">■ D1~29</span>
+            <span style="font-size:10px;color:#f1c40f">■ D30~59</span>
+            <span style="font-size:10px;color:#e67e22">■ D60~89</span>
+            <span style="font-size:10px;color:#e74c3c">■ D90~179</span>
+            <span style="font-size:10px;color:#9b59b6">■ D180+</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 매각가율 요약 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div>
+          <div class="section-title">예상 매각가 기준</div>
+          <div class="section-subtitle">d_debt_relief_status_history.status 기반</div>
+        </div>
+      </div>
+      <div class="summary-table">
+        <div class="sum-row">
+          <div class="sum-key">인가확정 (status=130)</div>
+          <div class="sum-val" style="color:var(--green)">잔여원금 × 80%</div>
+        </div>
+        <div class="sum-row">
+          <div class="sum-key">진행 중 (status=110/120)</div>
+          <div class="sum-val" style="color:var(--orange)">잔여원금 × 34%</div>
+        </div>
+        <div class="sum-row">
+          <div class="sum-key">일반연체 30일+</div>
+          <div class="sum-val" style="color:var(--yellow)">잔여원금 × 25%</div>
+        </div>
+        <div class="sum-row">
+          <div class="sum-key">일반연체 30일 미만</div>
+          <div class="sum-val" style="color:var(--accent)">산출 불가</div>
+        </div>
+      </div>
+      <div style="padding:0 18px 14px;">
+        <div style="background:var(--bg3);border-radius:8px;padding:12px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">예상 매각가 합산 (77건)</div>
+          <div class="progress-row">
+            <span style="width:90px;font-size:11px;color:var(--green)">인가확정</span>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:52%;background:var(--green);"></div></div>
+            <span style="font-size:11px;font-weight:600;color:var(--green)">4.1억</span>
+          </div>
+          <div class="progress-row">
+            <span style="width:90px;font-size:11px;color:var(--orange)">회생진행</span>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:22%;background:var(--orange);"></div></div>
+            <span style="font-size:11px;font-weight:600;color:var(--orange)">1.7억</span>
+          </div>
+          <div class="progress-row">
+            <span style="width:90px;font-size:11px;color:var(--yellow)">일반연체</span>
+            <div class="progress-bar-bg"><div class="progress-bar" style="width:27%;background:var(--yellow);"></div></div>
+            <span style="font-size:11px;font-weight:600;color:var(--yellow)">2.1억</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 특수채권 현황 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">특수채권 현황 (d_debt_relief + d_debt_relief_status_history)</div>
+        <div class="section-subtitle">개인회생 단계별 / 파산면책 / 사망·상속 · deleted_datetime IS NULL · 최신 status = MAX(registered_datetime)</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px;">
+        <button id="saleToggleBtn" onclick="toggleSpecialSale()"
+          style="padding:5px 12px;border-radius:20px;border:1px solid #8b90a855;background:transparent;color:var(--text-muted);font-size:11px;font-weight:600;cursor:pointer;transition:all 0.2s;white-space:nowrap;">
+          매각 건 포함
+        </button>
+        <div style="font-size:10px;color:var(--text-muted);opacity:0.7;">기준: b_repayment_sale</div>
+      </div>
+    </div>
+
+    <!-- ① 개인회생 단계별 파이프라인 -->
+    <div style="padding:12px 18px 8px;">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:10px;letter-spacing:0.2px;">개인회생 (d_debt_relief.type = 1) — 단계별 현황</div>
+      <div style="display:flex;align-items:stretch;gap:0;background:var(--bg3);border-radius:10px;overflow:hidden;border:1px solid var(--border);">
+
+        <!-- 접수/금지명령 (status=110) -->
+        <div style="flex:1;padding:14px 16px;border-right:1px solid var(--border);position:relative;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;">접수 / 금지명령</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">status = <code style="color:#5dade2">110</code></div>
+          <div id="sp-110-cnt" style="font-size:24px;font-weight:700;color:#5dade2;line-height:1;">3건</div>
+          <div id="sp-110-amt" style="font-size:11px;color:var(--text-muted);margin-top:4px;">잔여원금 1.2억 · 34% <span style="color:var(--teal)">(매각예상가 0.4억)</span></div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6;">
+            문자발송 중지 ✓<br>NICE 연체등록 불가 ✓<br>입금처리: <span style="color:var(--text-muted)">불가</span>
+          </div>
+        </div>
+
+        <!-- 화살표 -->
+        <div style="display:flex;align-items:center;padding:0 2px;background:var(--bg3);color:var(--text-muted);font-size:14px;">›</div>
+
+        <!-- 개시결정 (status=120) -->
+        <div style="flex:1;padding:14px 16px;border-right:1px solid var(--border);">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;">개시결정</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">status = <code style="color:var(--orange)">120</code></div>
+          <div id="sp-120-cnt" style="font-size:24px;font-weight:700;color:var(--orange);line-height:1;">6건</div>
+          <div id="sp-120-amt" style="font-size:11px;color:var(--text-muted);margin-top:4px;">잔여원금 3.7억 · 34% <span style="color:var(--teal)">(매각예상가 1.3억)</span></div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6;">
+            문자발송 중지 ✓<br>NICE 연체등록 불가 ✓<br>입금처리: <span style="color:var(--green)">허용(선수금)</span>
+          </div>
+        </div>
+
+        <!-- 화살표 -->
+        <div style="display:flex;align-items:center;padding:0 2px;background:var(--bg3);color:var(--text-muted);font-size:14px;">›</div>
+
+        <!-- 인가확정 (status=130) -->
+        <div style="flex:1;padding:14px 16px;border-right:1px solid var(--border);">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;">인가확정</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">status = <code style="color:var(--green)">130</code></div>
+          <div id="sp-130-cnt" style="font-size:24px;font-weight:700;color:var(--green);line-height:1;">11건</div>
+          <div id="sp-130-amt" style="font-size:11px;color:var(--text-muted);margin-top:4px;">잔여원금 5.1억 · 80% <span style="color:var(--teal)">(매각예상가 4.1억)</span></div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6;">
+            변제스케줄 확정 ✓<br>신정원 등록 제외 ✓<br>입금처리: <span style="color:var(--green)">허용</span>
+          </div>
+        </div>
+
+        <!-- 화살표 -->
+        <div style="display:flex;align-items:center;padding:0 2px;background:var(--bg3);color:var(--text-muted);font-size:14px;">›</div>
+
+        <!-- 폐지확정 (별도 관리) -->
+        <div style="flex:1;padding:14px 16px;">
+          <div style="font-size:12px;font-weight:600;color:var(--text);margin-bottom:2px;">폐지확정</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-bottom:10px;">기각/폐지 사건</div>
+          <div id="sp-폐지-cnt" style="font-size:24px;font-weight:700;color:var(--red);line-height:1;">2건</div>
+          <div id="sp-폐지-amt" style="font-size:11px;color:var(--text-muted);margin-top:4px;">잔여원금 0.8억</div>
+          <div style="margin-top:10px;padding-top:8px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);line-height:1.6;">
+            가상계좌번호 원복<br>NICE 등록 재개<br>입금처리: <span style="color:var(--text-muted)">불가</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ② 파산면책 + 사망/상속 -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:8px 18px 16px;">
+
+      <!-- 파산면책 -->
+      <div style="background:var(--bg3);border:1px solid #9b59b633;border-radius:10px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:#9b59b6;margin-bottom:2px;">개인파산면책</div>
+            <div style="font-size:10px;color:var(--text-muted);">d_debt_relief.type = <code style="color:#9b59b6">4</code></div>
+          </div>
+          <div style="background:#9b59b622;border:1px solid #9b59b644;border-radius:6px;padding:4px 10px;font-size:11px;color:#9b59b6;font-weight:600;">type=4</div>
+        </div>
+        <div id="sp-bankrupt-cnt" style="font-size:28px;font-weight:700;color:#9b59b6;line-height:1;margin-bottom:4px;">6건</div>
+        <div id="sp-bankrupt-amt" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">잔여원금 합 2.3억</div>
+        <div style="border-top:1px solid var(--border);padding-top:10px;font-size:10px;color:var(--text-muted);line-height:1.8;">
+          최신 status = <code style="color:#9b59b6">130</code> (면책결정 완료)<br>
+          잔여채무 법적 소멸 · CIS 등록 제외<br>
+          <span style="color:var(--yellow);">⚠ 면책 전 단계는 status 이력 확인 필수</span>
+        </div>
+      </div>
+
+      <!-- 사망/상속 -->
+      <div style="background:var(--bg3);border:1px solid #8b90a855;border-radius:10px;padding:16px 18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--text-muted);margin-bottom:2px;">사망 / 상속</div>
+            <div style="font-size:10px;color:var(--text-muted);">d_debt_relief.type = <code style="color:var(--text-muted)">5</code> <span style="color:#e74c3c55;">※ type값 확인 필요</span></div>
+          </div>
+          <div style="background:#8b90a822;border:1px solid #8b90a844;border-radius:6px;padding:4px 10px;font-size:11px;color:var(--text-muted);font-weight:600;">type=5</div>
+        </div>
+        <div id="sp-death-cnt" style="font-size:28px;font-weight:700;color:var(--text-muted);line-height:1;margin-bottom:4px;">3건</div>
+        <div id="sp-death-amt" style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">잔여원금 합 1.1억</div>
+        <div style="border-top:1px solid var(--border);padding-top:10px;font-size:10px;color:var(--text-muted);line-height:1.8;">
+          상속인 채무 승계 여부 확인 필요<br>
+          대출 사후관리 도메인: <code>loan-post-management-domain</code><br>
+          <span style="color:var(--yellow);">⚠ type 코드 DB 직접 확인 권고</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- SQL 쿼리 -->
+    <div class="sql-panel" style="margin:0 18px 14px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>특수채권 단계별 집계 쿼리 — d_debt_relief + d_debt_relief_status_history</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="cmt">-- 특수채권 유형별 + 최신 상태별 집계
+-- 최신 status: registered_datetime MAX 기준 (= 현재 진행 단계)
+-- [매각 건 제외 — 기본] WHERE 절 마지막 AND NOT EXISTS 조건 적용
+-- [매각 건 포함 — 토글 ON] 해당 AND NOT EXISTS 조건 제거</span>
+<span class="kw">WITH</span> latest_status <span class="kw">AS</span> (
+    <span class="kw">SELECT</span>
+        d_debt_relief_uid,
+        status,
+        registered_datetime,
+        <span class="fn">ROW_NUMBER</span>() <span class="kw">OVER</span> (
+            <span class="kw">PARTITION BY</span> d_debt_relief_uid
+            <span class="kw">ORDER BY</span> registered_datetime <span class="kw">DESC</span>
+        ) <span class="kw">AS</span> rn
+    <span class="kw">FROM</span> d_debt_relief_status_history
+)
+<span class="kw">SELECT</span>
+    <span class="kw">CASE</span> dr.type
+        <span class="kw">WHEN</span> <span class="num-lit">1</span> <span class="kw">THEN</span> <span class="str">'개인회생'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">2</span> <span class="kw">THEN</span> <span class="str">'일반회생'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">3</span> <span class="kw">THEN</span> <span class="str">'신용회복'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">4</span> <span class="kw">THEN</span> <span class="str">'파산면책'</span>
+        <span class="kw">ELSE</span> <span class="str">'사망/기타'</span>
+    <span class="kw">END</span>                                          <span class="kw">AS</span> relief_type,
+    ls.status                                    <span class="kw">AS</span> latest_status,
+    <span class="kw">CASE</span> ls.status
+        <span class="kw">WHEN</span> <span class="str">'110'</span> <span class="kw">THEN</span> <span class="str">'접수/금지명령'</span>
+        <span class="kw">WHEN</span> <span class="str">'120'</span> <span class="kw">THEN</span> <span class="str">'개시결정'</span>
+        <span class="kw">WHEN</span> <span class="str">'130'</span> <span class="kw">THEN</span> <span class="str">'인가확정'</span>
+        <span class="kw">ELSE</span>         ls.status
+    <span class="kw">END</span>                                          <span class="kw">AS</span> status_label,
+    <span class="fn">COUNT</span>(DISTINCT dr.uid)                       <span class="kw">AS</span> case_cnt,
+    <span class="fn">COUNT</span>(DISTINCT b.uid)                        <span class="kw">AS</span> bond_cnt,
+    <span class="fn">SUM</span>(b.amount - <span class="fn">COALESCE</span>(paid.total_paid, <span class="num-lit">0</span>)) <span class="kw">AS</span> outstanding_sum
+<span class="kw">FROM</span> d_debt_relief dr
+<span class="kw">JOIN</span> latest_status ls
+    <span class="kw">ON</span> dr.uid = ls.d_debt_relief_uid <span class="kw">AND</span> ls.rn = <span class="num-lit">1</span>
+<span class="kw">JOIN</span> p_deal d        <span class="kw">ON</span> dr.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_bond b    <span class="kw">ON</span> d.deal_uid = b.deal_uid
+<span class="kw">LEFT JOIN</span> (
+    <span class="kw">SELECT</span> bond_uid, <span class="fn">SUM</span>(principal) <span class="kw">AS</span> total_paid
+    <span class="kw">FROM</span> b_repayment_paid <span class="kw">GROUP BY</span> bond_uid
+) paid <span class="kw">ON</span> b.uid = paid.bond_uid
+<span class="kw">WHERE</span>
+    dr.deleted_datetime <span class="kw">IS NULL</span>
+    <span class="kw">AND</span> b.overdue_start_date <span class="kw">IS NOT NULL</span>
+    <span class="kw">AND NOT EXISTS</span> (
+        <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale s
+        <span class="kw">WHERE</span> s.bond_uid = b.uid <span class="kw">AND</span> s.is_whole_sale = <span class="num-lit">1</span>)
+<span class="kw">GROUP BY</span> dr.type, ls.status
+<span class="kw">ORDER BY</span> dr.type, ls.status;</pre>
+      </div>
+    </div>
+
+    <!-- 229 직접입금 알림 -->
+    <div style="margin:0 18px 16px;background:#e74c3c11;border:1px solid #e74c3c33;border-radius:8px;padding:12px 14px;">
+      <div style="font-size:12px;font-weight:600;color:var(--red);margin-bottom:4px;">⚠ 229 실계좌 미처리 직접입금 — 2건</div>
+      <div style="font-size:11px;color:var(--text-muted);">
+        2026-06-25 | deal_uid #4821 | 적요: 변제금 | <strong style="color:var(--text)">2,340,000원</strong> · 담당자 매칭 필요
+        <br>2026-06-24 | deal_uid #3994 | 적요: 신복위 지급 | <strong style="color:var(--text)">1,120,000원</strong> · 분배 처리 필요
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 채권 목록 테이블 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">연체채권 상세 목록 (77건)</div>
+        <div class="section-subtitle">NPL 전량매각(is_whole_sale=1) 제외 · overdue_start_date IS NOT NULL</div>
+      </div>
+    </div>
+    <div class="tab-bar">
+      <div class="tab-btn active" onclick="switchTab(event,'all')">전체 (77)</div>
+      <div class="tab-btn" onclick="switchTab(event,'special')">특수채권 (31)</div>
+      <div class="tab-btn" onclick="switchTab(event,'normal')">일반연체 (46)</div>
+      <div class="tab-btn" onclick="switchTab(event,'risk')">고위험 D90+ (24)</div>
+    </div>
+    <div class="filter-bar">
+      <span class="filter-label">연체구간</span>
+      <button class="filter-btn active" onclick="setFilter(this,'all')">전체</button>
+      <button class="filter-btn" onclick="setFilter(this,'d30')">30일+</button>
+      <button class="filter-btn" onclick="setFilter(this,'d90')">90일+</button>
+      <button class="filter-btn" onclick="setFilter(this,'d180')">180일+</button>
+      <span class="filter-label sp-filter-group" style="margin-left:12px;">특수채권</span>
+      <button class="filter-btn sp-filter-group" onclick="setFilter(this,'revival')">개인회생</button>
+      <button class="filter-btn sp-filter-group" onclick="setFilter(this,'bankrupt')">파산면책</button>
+      <button class="filter-btn sp-filter-group" onclick="setFilter(this,'death')">사망</button>
+    </div>
+    <div class="table-wrap" style="max-height:420px;overflow-y:auto;">
+      <table id="bondTable">
+        <thead>
+          <tr>
+            <th>deal_uid</th>
+            <th>bond_uid</th>
+            <th>차주 등급</th>
+            <th>연체시작일</th>
+            <th>연체일수</th>
+            <th>대출금액</th>
+            <th>잔여원금</th>
+            <th>특수채권</th>
+            <th>회생상태</th>
+            <th>예상매각가</th>
+            <th>기한이익상실일</th>
+            <th>연체중 회차수</th>
+            <th>총연체금액</th>
+            <th>NICE</th>
+            <th>KCB</th>
+          </tr>
+        </thead>
+        <tbody id="bondTbody">
+          <!-- JS로 렌더링 -->
+        </tbody>
+      </table>
+    </div>
+    <div class="pagination">
+      <span id="pageInfo">1 - 20 / 77건</span>
+      <button class="page-btn active" onclick="goPage(1)">1</button>
+      <button class="page-btn" onclick="goPage(2)">2</button>
+      <button class="page-btn" onclick="goPage(3)">3</button>
+      <button class="page-btn" onclick="goPage(4)">4</button>
+    </div>
+  </div>
+
+  <!-- ── 차트 섹션 ── -->
+  <div class="grid-2 section-mb">
+    <!-- 월별 신규 연체 트렌드 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">월별 신규 연체 발생 추이</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="trendChart"></canvas>
+      </div>
+    </div>
+    <!-- 특수채권 상태 바차트 -->
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">특수채권 유형별 잔여원금 분포 (M-2 / M-1 / M-0)</div>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="specialChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 주요 액션 타임라인 ── -->
+  <div class="grid-2 section-mb">
+    <div class="section-card">
+      <div class="section-header">
+        <div class="section-title">오늘 처리 필요 액션</div>
+      </div>
+      <div class="timeline">
+        <div class="tl-row">
+          <div class="tl-dot" style="background:var(--red)"></div>
+          <div class="tl-content">
+            <div class="tl-title" style="color:var(--red)">229 직접입금 미처리 2건 — 즉시 대응</div>
+            <div class="tl-desc">deal #4821 (234만), deal #3994 (112만) · 특수채권 담당자 어드민 매칭 필요</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-dot" style="background:var(--orange)"></div>
+          <div class="tl-content">
+            <div class="tl-title">CMS 출금 결과 확인 — 12건</div>
+            <div class="tl-desc">오늘 CMS 출금 예정 채권 12건 · 미수금 발생 시 연체 업데이트 (BondDao.updateBondOverdueStartDate)</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-dot" style="background:var(--yellow)"></div>
+          <div class="tl-content">
+            <div class="tl-title">NPL 매각 대상 검토 — D90+ 24건</div>
+            <div class="tl-desc">연체 90일 이상 일반연체 채권 매각 시뮬레이션 권고 · 예상 회수액 5.8억</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-dot" style="background:var(--accent)"></div>
+          <div class="tl-content">
+            <div class="tl-title">NICE 연체등록 대상 확인</div>
+            <div class="tl-desc">NiceOverdueTask 실행 결과 · 개인회생 채권 제외 여부 검증 (d_nice_overdue)</div>
+          </div>
+        </div>
+        <div class="tl-row">
+          <div class="tl-dot" style="background:var(--teal)"></div>
+          <div class="tl-content">
+            <div class="tl-title">신용회복 워크아웃 — 수수료 공제 확인</div>
+            <div class="tl-desc">5건 중 이번 달 합산 입금 예정 2건 · 신복위 수수료 공제 후 분배 처리</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SQL 쿼리 패널 -->
+    <div>
+      <div class="section-card">
+        <div class="section-header">
+          <div class="section-title">핵심 조회 쿼리</div>
+        </div>
+        <div class="sql-panel" style="margin:14px 18px 0;border:none;background:var(--bg3);">
+          <div class="sql-header open" onclick="toggleSql(this)">
+            <span>① 연체채권 + 개인회생 + 예상매각가</span>
+            <span style="font-size:10px;">▾</span>
+          </div>
+          <div class="sql-body open">
+<pre><span class="kw">SELECT</span>
+    d.deal_uid,
+    b.uid                                    <span class="kw">AS</span> bond_uid,
+    b.amount                                 <span class="kw">AS</span> loan_amount,
+    b.amount - <span class="fn">COALESCE</span>(paid.total_paid, <span class="num-lit">0</span>)   <span class="kw">AS</span> outstanding_balance,
+    b.overdue_start_date,
+    <span class="fn">DATEDIFF</span>(<span class="fn">CURDATE</span>(), b.overdue_start_date)   <span class="kw">AS</span> overdue_days,
+    drh.status                               <span class="kw">AS</span> relief_status,
+    <span class="kw">CASE</span>
+        <span class="kw">WHEN</span> drh.status = <span class="str">'130'</span>
+            <span class="kw">THEN</span> <span class="fn">ROUND</span>((b.amount - <span class="fn">COALESCE</span>(paid.total_paid,<span class="num-lit">0</span>)) * <span class="num-lit">0.80</span>, <span class="num-lit">0</span>)
+        <span class="kw">WHEN</span> drh.status <span class="kw">IN</span> (<span class="str">'120'</span>, <span class="str">'110'</span>)
+            <span class="kw">THEN</span> <span class="fn">ROUND</span>((b.amount - <span class="fn">COALESCE</span>(paid.total_paid,<span class="num-lit">0</span>)) * <span class="num-lit">0.34</span>, <span class="num-lit">0</span>)
+        <span class="kw">WHEN</span> dr.uid <span class="kw">IS NULL</span>
+         <span class="kw">AND</span> <span class="fn">DATEDIFF</span>(<span class="fn">CURDATE</span>(), b.overdue_start_date) >= <span class="num-lit">30</span>
+            <span class="kw">THEN</span> <span class="fn">ROUND</span>((b.amount - <span class="fn">COALESCE</span>(paid.total_paid,<span class="num-lit">0</span>)) * <span class="num-lit">0.25</span>, <span class="num-lit">0</span>)
+        <span class="kw">ELSE NULL</span>
+    <span class="kw">END</span>                                      <span class="kw">AS</span> expected_sale_price
+<span class="kw">FROM</span> tb_lo_bond b
+<span class="kw">JOIN</span> p_deal d           <span class="kw">ON</span> b.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_apply la     <span class="kw">ON</span> d.loan_apply_uid = la.uid
+<span class="kw">JOIN</span> l_credit_apply ca  <span class="kw">ON</span> la.uid = ca.apply_uid
+<span class="kw">LEFT JOIN</span> ( <span class="fn">SELECT</span> bond_uid, <span class="fn">SUM</span>(principal) <span class="kw">AS</span> total_paid
+            <span class="kw">FROM</span> b_repayment_paid <span class="kw">GROUP BY</span> bond_uid ) paid
+    <span class="kw">ON</span> b.uid = paid.bond_uid
+<span class="kw">LEFT JOIN</span> d_debt_relief dr
+    <span class="kw">ON</span> d.deal_uid = dr.deal_uid
+   <span class="kw">AND</span> dr.type = <span class="num-lit">1</span> <span class="kw">AND</span> dr.deleted_datetime <span class="kw">IS NULL</span>
+<span class="kw">LEFT JOIN</span> d_debt_relief_status_history drh
+    <span class="kw">ON</span> dr.uid = drh.d_debt_relief_uid
+   <span class="kw">AND</span> drh.registered_datetime = (
+       <span class="kw">SELECT MAX</span>(h.registered_datetime)
+       <span class="kw">FROM</span> d_debt_relief_status_history h
+       <span class="kw">WHERE</span> h.d_debt_relief_uid = dr.uid )
+<span class="kw">WHERE</span> b.overdue_start_date <span class="kw">IS NOT NULL</span>
+  <span class="kw">AND NOT EXISTS</span> (
+      <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale brs
+      <span class="kw">WHERE</span> brs.bond_uid = b.uid <span class="kw">AND</span> brs.is_whole_sale = <span class="num-lit">1</span> )
+<span class="kw">ORDER BY</span> overdue_days <span class="kw">DESC</span>;
+<span class="cmt">-- 결과: 77건</span></pre>
+          </div>
+        </div>
+        <div class="sql-panel" style="margin:10px 18px 0;border:none;background:var(--bg3);">
+          <div class="sql-header" onclick="toggleSql(this)">
+            <span>② 특수채권 유형별 집계</span>
+            <span style="font-size:10px;">▸</span>
+          </div>
+          <div class="sql-body">
+<pre><span class="kw">SELECT</span>
+    dr.type,
+    <span class="kw">CASE</span> dr.type
+        <span class="kw">WHEN</span> <span class="num-lit">1</span> <span class="kw">THEN</span> <span class="str">'개인회생'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">2</span> <span class="kw">THEN</span> <span class="str">'일반회생'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">3</span> <span class="kw">THEN</span> <span class="str">'신용회복'</span>
+        <span class="kw">WHEN</span> <span class="num-lit">4</span> <span class="kw">THEN</span> <span class="str">'파산면책'</span>
+    <span class="kw">END</span> <span class="kw">AS</span> type_name,
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> cnt,
+    <span class="fn">SUM</span>(b.amount - <span class="fn">COALESCE</span>(paid.total_paid, <span class="num-lit">0</span>))
+                  <span class="kw">AS</span> total_outstanding
+<span class="kw">FROM</span> d_debt_relief dr
+<span class="kw">JOIN</span> p_deal d     <span class="kw">ON</span> dr.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_bond b <span class="kw">ON</span> b.deal_uid = d.deal_uid
+<span class="kw">LEFT JOIN</span> ( <span class="kw">SELECT</span> bond_uid, <span class="fn">SUM</span>(principal) <span class="kw">AS</span> total_paid
+            <span class="kw">FROM</span> b_repayment_paid <span class="kw">GROUP BY</span> bond_uid ) paid
+    <span class="kw">ON</span> b.uid = paid.bond_uid
+<span class="kw">WHERE</span> dr.deleted_datetime <span class="kw">IS NULL</span>
+<span class="kw">GROUP BY</span> dr.type;</pre>
+          </div>
+        </div>
+        <div class="sql-panel" style="margin:10px 18px 0;border:none;background:var(--bg3);">
+          <div class="sql-header" onclick="toggleSql(this)">
+            <span>③ 금일 상환 예정 및 익영업일 실적 확인</span>
+            <span style="font-size:10px;">▸</span>
+          </div>
+          <div class="sql-body">
+<pre><span class="cmt">-- [당일] 금일 상환 예정 모수: adjusted_repayment_date = 오늘</span>
+<span class="kw">SELECT</span>
+    rc.bond_uid,
+    rc.deal_repayment_seq,
+    rc.principal + rc.interest              <span class="kw">AS</span> expected_amount,
+    rc.adjusted_repayment_date
+<span class="kw">FROM</span> b_repayment_charged rc
+<span class="kw">WHERE</span>
+    rc.adjusted_repayment_date = <span class="fn">CURDATE</span>()
+    <span class="kw">AND</span> rc.actual_repayment_date <span class="kw">IS NULL</span>   <span class="cmt">-- 미상환</span>
+    <span class="kw">AND NOT EXISTS</span> (
+        <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale s
+        <span class="kw">WHERE</span> s.bond_uid = rc.bond_uid <span class="kw">AND</span> s.is_whole_sale = <span class="num-lit">1</span>);
+
+<span class="cmt">-- [+1 영업일] CMS 결과로 실제 상환 여부 확인</span>
+<span class="kw">SELECT</span>
+    rc.bond_uid,
+    rc.deal_repayment_seq,
+    rc.principal + rc.interest              <span class="kw">AS</span> expected_amount,
+    <span class="kw">CASE WHEN</span> cwr.uid <span class="kw">IS NOT NULL</span>
+         <span class="kw">THEN</span> <span class="str">'성공'</span> <span class="kw">ELSE</span> <span class="str">'실패/미확인'</span>
+    <span class="kw">END</span>                                     <span class="kw">AS</span> cms_result,
+    cwr.deposit_uid                         <span class="cmt">-- b_repayment_deposit 연결키</span>
+<span class="kw">FROM</span> b_repayment_charged rc
+<span class="kw">JOIN</span> l_cms_withdraw lcw
+    <span class="kw">ON</span> rc.bond_uid = lcw.deal_uid           <span class="cmt">-- deal_uid 기준 매칭</span>
+   <span class="kw">AND</span> rc.deal_repayment_seq = lcw.deal_repayment_seq
+<span class="kw">LEFT JOIN</span> tb_cms_withdraw_result cwr
+    <span class="kw">ON</span> lcw.deal_uid = cwr.deal_uid
+   <span class="kw">AND</span> lcw.cms_process_uid = cwr.cms_process_uid
+<span class="kw">WHERE</span>
+    rc.adjusted_repayment_date = <span class="fn">DATE_SUB</span>(<span class="fn">CURDATE</span>(), <span class="kw">INTERVAL</span> <span class="num-lit">1</span> <span class="kw">DAY</span>) <span class="cmt">-- 전일(익영업일 조회 시)</span>
+    <span class="kw">AND</span> rc.actual_repayment_date <span class="kw">IS NULL</span>;  <span class="cmt">-- 여전히 미상환이면 실패 확정</span></pre>
+          </div>
+        </div>
+        <div style="height:14px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════════════
+       ▶ 신규 지표 섹션 (5개)
+  ══════════════════════════════════════════════════ -->
+
+  <!-- ── 구분선 ── -->
+  <div style="border-top:2px solid var(--accent);margin:8px 0 20px;opacity:0.3;"></div>
+  <div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:16px;letter-spacing:-0.2px;">📊 심화 분석 지표</div>
+
+  <!-- ── 1. 연체 전이율 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">① 연체 전이율 (Delinquency Migration Rate)</div>
+        <div class="section-subtitle">M1(~30일) → M2(31~60일) → M3(61~90일) → M4(90일+) · 1개월 단위 미상환 잔존 비율</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);">기준: analysis.bond.daily_snapshot (월말 스냅샷 비교)</div>
+    </div>
+
+    <!-- 지표 정의 -->
+    <div style="margin:0 18px 12px;padding:12px 14px;background:#6c7bff11;border:1px solid #6c7bff33;border-radius:8px;font-size:11px;line-height:1.7;">
+      <div style="font-weight:700;color:var(--accent);margin-bottom:6px;">📐 지표 정의</div>
+      <div style="color:var(--text-muted);">
+        <strong style="color:var(--text)">연체 전이율</strong>은 <strong style="color:var(--accent)">동일 채권이 시간 흐름에 따라 연체 구간을 악화하는 비율</strong>입니다.
+        <br>전월말 스냅샷에서 M1 구간(연체 1~30일)에 있던 채권이 당월말 스냅샷에서 M2(31~60일)로 이동했다면 → M1→M2 전이.
+        <br>즉 <span style="color:var(--accent);">M1 → M2 → M3</span>는 <strong style="color:var(--red)">시간 경과에 따른 연체 심화</strong>를 나타내며, M1이 가장 초기(최근 연체), M4+가 가장 심각(장기연체)입니다.
+      </div>
+      <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;">
+          <span style="color:var(--text-muted);">모수:</span> <span style="color:var(--text);">전월말 스냅샷 기준 구간 내 채권</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;">
+          <span style="color:var(--text-muted);">분자:</span> <span style="color:var(--text);">당월말에 상위 구간으로 이동한 채권 수</span>
+        </div>
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;">
+          <span style="color:var(--text-muted);">데이터 소스:</span> <span style="color:var(--accent);">analysis.bond.daily_snapshot</span> (월말 스냅샷)
+        </div>
+      </div>
+      <div style="margin-top:8px;padding:6px 10px;background:#e74c3c11;border-radius:6px;color:var(--text-muted);">
+        ⚠ 연체 해소율(아래 ⑥)과 혼동 주의. 전이율은 <em>악화 방향</em>만 추적합니다. 개선(상환) 비율은 해소율을 참조하세요.
+      </div>
+    </div>
+
+    <!-- 전이 흐름 시각화 -->
+    <div style="padding:18px 18px 8px;display:flex;align-items:center;gap:0;overflow-x:auto;">
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">M1 (D1~30)</div>
+        <div style="background:#3498db22;border:1px solid #3498db55;border-radius:10px;padding:12px 8px;">
+          <div style="font-size:20px;font-weight:700;color:#5dade2">77건</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">잔여원금 합</div>
+          <div style="font-size:12px;color:#5dade2;font-weight:600">28.4억</div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:80px;">
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-bottom:2px;">✓ 상환 완료 18%</div>
+        <div style="width:100%;height:2px;background:linear-gradient(90deg,#3498db,#f1c40f);margin:6px 0;"></div>
+        <div style="font-size:10px;color:var(--red);font-weight:600;margin-top:2px;">→ M2 전이 82%</div>
+      </div>
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">M2 (D31~60)</div>
+        <div style="background:#f1c40f22;border:1px solid #f1c40f55;border-radius:10px;padding:12px 8px;">
+          <div style="font-size:20px;font-weight:700;color:#f1c40f">63건</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">잔여원금 합</div>
+          <div style="font-size:12px;color:#f1c40f;font-weight:600">23.3억</div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:80px;">
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-bottom:2px;">✓ 상환 완료 11%</div>
+        <div style="width:100%;height:2px;background:linear-gradient(90deg,#f1c40f,#e67e22);margin:6px 0;"></div>
+        <div style="font-size:10px;color:var(--red);font-weight:600;margin-top:2px;">→ M3 전이 89%</div>
+      </div>
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">M3 (D61~90)</div>
+        <div style="background:#e67e2222;border:1px solid #e67e2255;border-radius:10px;padding:12px 8px;">
+          <div style="font-size:20px;font-weight:700;color:#e67e22">56건</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">잔여원금 합</div>
+          <div style="font-size:12px;color:#e67e22;font-weight:600">20.7억</div>
+        </div>
+      </div>
+      <div style="flex:1;display:flex;flex-direction:column;align-items:center;min-width:80px;">
+        <div style="font-size:10px;color:var(--green);font-weight:600;margin-bottom:2px;">✓ 상환 완료 6%</div>
+        <div style="width:100%;height:2px;background:linear-gradient(90deg,#e67e22,#e74c3c);margin:6px 0;"></div>
+        <div style="font-size:10px;color:var(--red);font-weight:600;margin-top:2px;">→ M4 전이 94%</div>
+      </div>
+      <div style="text-align:center;min-width:110px;">
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">M4 (D90+)</div>
+        <div style="background:#e74c3c22;border:1px solid #e74c3c55;border-radius:10px;padding:12px 8px;">
+          <div style="font-size:20px;font-weight:700;color:#e74c3c">53건</div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:2px;">잔여원금 합</div>
+          <div style="font-size:12px;color:#e74c3c;font-weight:600">19.5억</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 전이 매트릭스 테이블 -->
+    <div style="padding:0 18px 16px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;margin-top:8px;">전이율 매트릭스 (전월 → 당월 기준)</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>전월 구간</th>
+              <th class="num">전월 건수</th>
+              <th class="num">당월 상환완료</th>
+              <th class="num">상환완료율</th>
+              <th class="num">당월 잔존(전이)</th>
+              <th class="num">전이율</th>
+              <th class="num">잔존 잔여원금</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span class="status-badge" style="background:#3498db22;color:#5dade2;border:1px solid #3498db44;">M1 D1~30</span></td>
+              <td class="num">77건</td>
+              <td class="num" style="color:var(--green)">14건</td>
+              <td class="num" style="color:var(--green);font-weight:700">18.2%</td>
+              <td class="num">63건</td>
+              <td class="num" style="color:#f1c40f;font-weight:700">81.8%</td>
+              <td class="num">23.3억</td>
+            </tr>
+            <tr>
+              <td><span class="status-badge" style="background:#f1c40f22;color:#f1c40f;border:1px solid #f1c40f44;">M2 D31~60</span></td>
+              <td class="num">63건</td>
+              <td class="num" style="color:var(--green)">7건</td>
+              <td class="num" style="color:var(--green);font-weight:700">11.1%</td>
+              <td class="num">56건</td>
+              <td class="num" style="color:#e67e22;font-weight:700">88.9%</td>
+              <td class="num">20.7억</td>
+            </tr>
+            <tr>
+              <td><span class="status-badge" style="background:#e67e2222;color:#e67e22;border:1px solid #e67e2244;">M3 D61~90</span></td>
+              <td class="num">56건</td>
+              <td class="num" style="color:var(--green)">3건</td>
+              <td class="num" style="color:var(--green);font-weight:700">5.4%</td>
+              <td class="num">53건</td>
+              <td class="num" style="color:var(--red);font-weight:700">94.6%</td>
+              <td class="num">19.5억</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="margin-top:10px;padding:10px 12px;background:#2ecc7111;border:1px solid #2ecc7133;border-radius:8px;font-size:11px;color:var(--text-muted);">
+        ✅ <strong style="color:var(--green)">스냅샷 기반:</strong> <code>analysis.bond.daily_snapshot</code> 에서 전월말/당월말 구간 비교로 실제 전이 건수 산출. 역산 오차 없음.
+      </div>
+    </div>
+
+    <!-- SQL -->
+    <div class="sql-panel" style="margin:0 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>연체 전이율 쿼리 — analysis.bond.daily_snapshot</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="cmt">-- 전이율: 전월말 M버킷 → 당월말 M버킷 비교 (daily_snapshot 활용)</span>
+<span class="kw">WITH</span>
+prev_month <span class="kw">AS</span> (
+    <span class="cmt">-- 전월말 스냅샷에서 각 채권의 연체 구간 확정</span>
+    <span class="kw">SELECT</span>
+        bond_uid,
+        outstanding_balance,
+        <span class="kw">CASE</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">1</span>  <span class="kw">AND</span> <span class="num-lit">30</span> <span class="kw">THEN</span> <span class="str">'M1'</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">31</span> <span class="kw">AND</span> <span class="num-lit">60</span> <span class="kw">THEN</span> <span class="str">'M2'</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">61</span> <span class="kw">AND</span> <span class="num-lit">90</span> <span class="kw">THEN</span> <span class="str">'M3'</span>
+            <span class="kw">WHEN</span> overdue_days > <span class="num-lit">90</span>           <span class="kw">THEN</span> <span class="str">'M4+'</span>
+            <span class="kw">ELSE</span> <span class="str">'정상'</span>
+        <span class="kw">END</span> <span class="kw">AS</span> bucket
+    <span class="kw">FROM</span> analysis.bond.daily_snapshot
+    <span class="kw">WHERE</span> snapshot_date = <span class="fn">LAST_DAY</span>(<span class="fn">DATE_SUB</span>(<span class="fn">CURDATE</span>(), <span class="kw">INTERVAL</span> <span class="num-lit">1</span> <span class="kw">MONTH</span>))
+      <span class="kw">AND</span> is_whole_sale = <span class="num-lit">0</span>
+),
+curr_month <span class="kw">AS</span> (
+    <span class="cmt">-- 당월말(또는 최신) 스냅샷</span>
+    <span class="kw">SELECT</span>
+        bond_uid,
+        outstanding_balance,
+        <span class="kw">CASE</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">1</span>  <span class="kw">AND</span> <span class="num-lit">30</span> <span class="kw">THEN</span> <span class="str">'M1'</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">31</span> <span class="kw">AND</span> <span class="num-lit">60</span> <span class="kw">THEN</span> <span class="str">'M2'</span>
+            <span class="kw">WHEN</span> overdue_days <span class="kw">BETWEEN</span> <span class="num-lit">61</span> <span class="kw">AND</span> <span class="num-lit">90</span> <span class="kw">THEN</span> <span class="str">'M3'</span>
+            <span class="kw">WHEN</span> overdue_days > <span class="num-lit">90</span>           <span class="kw">THEN</span> <span class="str">'M4+'</span>
+            <span class="kw">ELSE</span> <span class="str">'정상'</span>
+        <span class="kw">END</span> <span class="kw">AS</span> bucket
+    <span class="kw">FROM</span> analysis.bond.daily_snapshot
+    <span class="kw">WHERE</span> snapshot_date = <span class="fn">LAST_DAY</span>(<span class="fn">CURDATE</span>())  <span class="cmt">-- 또는 MAX(snapshot_date)</span>
+      <span class="kw">AND</span> is_whole_sale = <span class="num-lit">0</span>
+)
+<span class="kw">SELECT</span>
+    p.bucket                              <span class="kw">AS</span> prev_bucket,
+    c.bucket                              <span class="kw">AS</span> curr_bucket,
+    <span class="fn">COUNT</span>(*)                              <span class="kw">AS</span> cnt,
+    <span class="fn">SUM</span>(c.outstanding_balance)            <span class="kw">AS</span> outstanding_sum,
+    <span class="fn">ROUND</span>(<span class="fn">COUNT</span>(*) * <span class="num-lit">100.0</span>
+        / <span class="fn">SUM</span>(<span class="fn">COUNT</span>(*)) <span class="kw">OVER</span> (<span class="kw">PARTITION BY</span> p.bucket), <span class="num-lit">1</span>)
+                                          <span class="kw">AS</span> transition_rate_pct
+<span class="kw">FROM</span> prev_month p
+<span class="kw">JOIN</span> curr_month c <span class="kw">ON</span> p.bond_uid = c.bond_uid
+<span class="kw">WHERE</span> p.bucket <span class="kw">IN</span> (<span class="str">'M1'</span>, <span class="str">'M2'</span>, <span class="str">'M3'</span>)  <span class="cmt">-- 전월 연체 구간이 모수</span>
+<span class="kw">GROUP BY</span> p.bucket, c.bucket
+<span class="kw">ORDER BY</span> p.bucket, c.bucket;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 2. 연체 해소율 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">② 연체 해소율 (Delinquency Resolution Rate)</div>
+        <div class="section-subtitle">연체 발생 코호트 기준 · D+30/60/90 시점 잔존율 추적 · overdue_start_date 기반 생존 곡선</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);">기준: tb_lo_bond.overdue_start_date + b_repayment_paid</div>
+    </div>
+
+    <!-- 지표 정의 -->
+    <div style="margin:0 18px 12px;padding:12px 14px;background:#1abc9c11;border:1px solid #1abc9c33;border-radius:8px;font-size:11px;line-height:1.7;">
+      <div style="font-weight:700;color:var(--teal);margin-bottom:6px;">📐 지표 정의</div>
+      <div style="color:var(--text-muted);">
+        <strong style="color:var(--text)">연체 해소율</strong>은 <strong style="color:var(--teal)">특정 시점에 연체가 발생한 코호트(동일 월 연체 시작 채권)가 이후 각 시점까지 상환 완료된 비율</strong>입니다.
+        <br>예: 2026-03에 연체가 시작된 채권 N건 중 → D+30일 시점에 몇 건이 해소됐는가?
+        <br>전이율과 반대 방향: <span style="color:var(--teal)">D+30 → D+60 → D+90</span>으로 갈수록 <strong style="color:var(--green)">누적 해소 비율 증가</strong>, <strong style="color:var(--red)">잔존 비율 감소</strong>.
+      </div>
+      <div style="margin-top:8px;display:flex;gap:12px;flex-wrap:wrap;">
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;"><span style="color:var(--text-muted);">코호트:</span> <span style="color:var(--text);">같은 달 overdue_start_date 채권 묶음</span></div>
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;"><span style="color:var(--text-muted);">해소 기준:</span> <span style="color:var(--text);">b_repayment_paid 기록 D+N일 이전 존재</span></div>
+        <div style="background:var(--bg3);border-radius:6px;padding:6px 10px;"><span style="color:var(--text-muted);">시점:</span> <span style="color:var(--teal);">D+30 / D+60 / D+90 / D+180</span></div>
+      </div>
+      <div style="margin-top:8px;padding:6px 10px;background:#6c7bff11;border-radius:6px;color:var(--text-muted);">
+        💡 전이율(①)이 <em>얼마나 빠르게 악화되는지</em>를 본다면, 해소율은 <em>얼마나 빠르게 회복되는지</em>를 봅니다.
+      </div>
+    </div>
+
+    <!-- 코호트 생존 테이블 -->
+    <div style="padding:0 18px 16px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">코호트별 연체 잔존율 (연체 미해소 비율) · 평균 금리 및 HF 등급 포함</div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>연체 시작월 (코호트)</th>
+              <th class="num">초기 건수</th>
+              <th class="num">평균 금리</th>
+              <th class="num">평균 HF 등급</th>
+              <th class="num">D+30 잔존</th>
+              <th class="num">D+30 해소율</th>
+              <th class="num">D+60 잔존</th>
+              <th class="num">D+60 해소율</th>
+              <th class="num">D+90 잔존</th>
+              <th class="num">D+90 해소율</th>
+              <th class="num">D+180 잔존</th>
+              <th class="num">D+180 해소율</th>
+            </tr>
+          </thead>
+          <tbody id="resolutionTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- 생존 곡선 차트 -->
+    <div style="padding:0 18px 14px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">코호트별 연체 잔존율 추이 (낮을수록 해소 빠름)</div>
+      <canvas id="resolutionChart" style="max-height:200px;"></canvas>
+    </div>
+
+    <!-- SQL -->
+    <div class="sql-panel" style="margin:0 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>연체 해소율 쿼리 — 코호트별 생존 추적 (평균 금리/등급 포함)</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="cmt">-- 코호트 = overdue_start_date의 월 기준 · 평균 금리/HF 등급 조인 추가</span>
+<span class="kw">WITH</span>
+cohort <span class="kw">AS</span> (
+    <span class="kw">SELECT</span>
+        b.uid                                        <span class="kw">AS</span> bond_uid,
+        <span class="fn">DATE_FORMAT</span>(b.overdue_start_date, <span class="str">'%Y-%m'</span>)  <span class="kw">AS</span> cohort_month,
+        b.overdue_start_date,
+        ca.rate                                      <span class="kw">AS</span> loan_rate,
+        lc.hf_grade_final                            <span class="kw">AS</span> hf_grade
+    <span class="kw">FROM</span> tb_lo_bond b
+    <span class="kw">JOIN</span> p_deal d           <span class="kw">ON</span> b.deal_uid = d.deal_uid
+    <span class="kw">JOIN</span> tb_lo_apply la     <span class="kw">ON</span> d.loan_apply_uid = la.uid
+    <span class="kw">JOIN</span> l_credit_apply ca  <span class="kw">ON</span> la.uid = ca.apply_uid
+    <span class="kw">LEFT JOIN</span> l_limit_calculation lc <span class="kw">ON</span> la.uid = lc.credit_apply_uid
+    <span class="kw">WHERE</span>
+        b.overdue_start_date <span class="kw">IS NOT NULL</span>
+        <span class="kw">AND</span> la.loan_product_type = <span class="num-lit">1</span>
+        <span class="kw">AND NOT EXISTS</span> (
+            <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale s
+            <span class="kw">WHERE</span> s.bond_uid = b.uid <span class="kw">AND</span> s.is_whole_sale = <span class="num-lit">1</span>)
+),
+resolution <span class="kw">AS</span> (
+    <span class="kw">SELECT</span> bond_uid, <span class="fn">MIN</span>(paid_date) <span class="kw">AS</span> first_paid_date
+    <span class="kw">FROM</span> b_repayment_paid <span class="kw">GROUP BY</span> bond_uid
+)
+<span class="kw">SELECT</span>
+    c.cohort_month,
+    <span class="fn">COUNT</span>(*)                                                <span class="kw">AS</span> total_cnt,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(c.loan_rate) * <span class="num-lit">100</span>, <span class="num-lit">2</span>)                    <span class="kw">AS</span> avg_rate_pct,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(c.hf_grade), <span class="num-lit">1</span>)                             <span class="kw">AS</span> avg_hf_grade,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date > c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">30</span> <span class="kw">DAY OR</span> r.first_paid_date <span class="kw">IS NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) <span class="kw">AS</span> remain_d30,
+    <span class="fn">ROUND</span>(<span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date <= c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">30</span> <span class="kw">DAY THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) * <span class="num-lit">100.0</span> / <span class="fn">COUNT</span>(*), <span class="num-lit">1</span>) <span class="kw">AS</span> resolution_rate_d30,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date > c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">60</span> <span class="kw">DAY OR</span> r.first_paid_date <span class="kw">IS NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) <span class="kw">AS</span> remain_d60,
+    <span class="fn">ROUND</span>(<span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date <= c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">60</span> <span class="kw">DAY THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) * <span class="num-lit">100.0</span> / <span class="fn">COUNT</span>(*), <span class="num-lit">1</span>) <span class="kw">AS</span> resolution_rate_d60,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date > c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">90</span> <span class="kw">DAY OR</span> r.first_paid_date <span class="kw">IS NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) <span class="kw">AS</span> remain_d90,
+    <span class="fn">ROUND</span>(<span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date <= c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">90</span> <span class="kw">DAY THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) * <span class="num-lit">100.0</span> / <span class="fn">COUNT</span>(*), <span class="num-lit">1</span>) <span class="kw">AS</span> resolution_rate_d90,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date > c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">180</span> <span class="kw">DAY OR</span> r.first_paid_date <span class="kw">IS NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) <span class="kw">AS</span> remain_d180,
+    <span class="fn">ROUND</span>(<span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> r.first_paid_date <= c.overdue_start_date + <span class="kw">INTERVAL</span> <span class="num-lit">180</span> <span class="kw">DAY THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) * <span class="num-lit">100.0</span> / <span class="fn">COUNT</span>(*), <span class="num-lit">1</span>) <span class="kw">AS</span> resolution_rate_d180
+<span class="kw">FROM</span> cohort c
+<span class="kw">LEFT JOIN</span> resolution r <span class="kw">ON</span> c.bond_uid = r.bond_uid
+<span class="kw">GROUP BY</span> c.cohort_month
+<span class="kw">ORDER BY</span> c.cohort_month <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num-lit">12</span>;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 3. 30일 기준 상환 완료율 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">③ 30일 상환 완료 건 및 비율</div>
+        <div class="section-subtitle">전일(2026-06-25) 기준 · 30일 이상 연체 지속 채권(overdue_start_date ≤ 기준일-30) 중 기간 내 상환 완료 비율</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;padding:16px 18px 8px;">
+      <div class="kpi-card" style="--accent-color:var(--accent)">
+        <div class="kpi-label">30일+ 연체 진행중 (모수)</div>
+        <div class="kpi-value">52건</div>
+        <div class="kpi-sub">overdue_start_date ≤ 기준일-30 (기간 지속 포함)</div>
+      </div>
+      <div class="kpi-card" style="--accent-color:var(--green)">
+        <div class="kpi-label">기간 내 상환 완료</div>
+        <div class="kpi-value" style="color:var(--green)">11건</div>
+        <div class="kpi-sub">b_repayment_paid 기록 존재</div>
+      </div>
+      <div class="kpi-card" style="--accent-color:var(--red)">
+        <div class="kpi-label">미상환 잔존</div>
+        <div class="kpi-value" style="color:var(--red)">27건</div>
+        <div class="kpi-sub">현재도 연체 진행 중</div>
+      </div>
+      <div class="kpi-card" style="--accent-color:var(--yellow)">
+        <div class="kpi-label">30일 상환 완료율</div>
+        <div class="kpi-value" style="color:var(--yellow)">28.9%</div>
+        <div class="kpi-sub">회수 수준 지표</div>
+      </div>
+    </div>
+
+    <div style="padding:8px 18px 16px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">월별 30일 상환 완료율 추이</div>
+      <canvas id="repayChart30" style="max-height:160px;"></canvas>
+    </div>
+
+    <div style="margin:0 18px 14px;padding:10px 12px;background:#2ecc7111;border:1px solid #2ecc7133;border-radius:8px;font-size:11px;">
+      <strong style="color:var(--green)">산출 방식:</strong>
+      <span style="color:var(--text-muted)"> 기준일 = CURDATE()-1 · 모수 = overdue_start_date = 기준일-30 · 상환 = b_repayment_paid.paid_date ≤ 기준일 이내 존재 · 당일 연체(D0) 제외</span>
+    </div>
+
+    <div class="sql-panel" style="margin:0 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>30일 상환완료율 쿼리</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="kw">SET</span> @base_date = <span class="fn">DATE_SUB</span>(<span class="fn">CURDATE</span>(), <span class="kw">INTERVAL</span> <span class="num-lit">1</span> <span class="kw">DAY</span>);  <span class="cmt">-- 전일</span>
+<span class="kw">SET</span> @overdue_date = <span class="fn">DATE_SUB</span>(@base_date, <span class="kw">INTERVAL</span> <span class="num-lit">30</span> <span class="kw">DAY</span>); <span class="cmt">-- 30일 전 연체 시작일</span>
+
+<span class="kw">SELECT</span>
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> total_overdue_30d,
+    <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> repaid.bond_uid <span class="kw">IS NOT NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) <span class="kw">AS</span> repaid_cnt,
+    <span class="fn">ROUND</span>(
+        <span class="fn">SUM</span>(<span class="kw">CASE WHEN</span> repaid.bond_uid <span class="kw">IS NOT NULL THEN</span> <span class="num-lit">1</span> <span class="kw">ELSE</span> <span class="num-lit">0</span> <span class="kw">END</span>) * <span class="num-lit">100.0</span>
+        / <span class="fn">COUNT</span>(*), <span class="num-lit">1</span>
+    ) <span class="kw">AS</span> repayment_rate_pct
+<span class="kw">FROM</span> tb_lo_bond b
+<span class="kw">LEFT JOIN</span> (
+    <span class="cmt">-- 30일 이내 기간 중 상환 기록 존재 여부</span>
+    <span class="kw">SELECT DISTINCT</span> bond_uid
+    <span class="kw">FROM</span> b_repayment_paid
+    <span class="kw">WHERE</span> paid_date <span class="kw">BETWEEN</span> @overdue_date <span class="kw">AND</span> @base_date
+) repaid <span class="kw">ON</span> b.uid = repaid.bond_uid
+<span class="kw">WHERE</span>
+    b.overdue_start_date &lt;= @overdue_date   <span class="cmt">-- 30일 이상 연체 지속 채권 (기간 지속 포함)</span>
+    <span class="kw">AND NOT EXISTS</span> (
+        <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale s
+        <span class="kw">WHERE</span> s.bond_uid = b.uid <span class="kw">AND</span> s.is_whole_sale = <span class="num-lit">1</span>);</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 4. 단기 연체 반복 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">④ 단기 연체 반복 채권</div>
+        <div class="section-subtitle">연체-상환 반복 패턴 · b_repayment_charged (actual - adjusted) 회차별 지연일수 기반</div>
+      </div>
+      <div style="padding:4px 10px;background:#e67e2222;border:1px solid #e67e2244;border-radius:6px;font-size:11px;color:var(--orange);">⚠ overdue_start_date는 단일값 — 회차별 지연일로 반복 추적</div>
+    </div>
+
+    <!-- 구간별 분포 -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:16px 18px 8px;">
+      <div class="section-card" style="border-color:#3498db44;">
+        <div style="padding:14px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">단기 연체 D1~5</div>
+          <div style="font-size:22px;font-weight:700;color:#5dade2">23건</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">반복 발생 채권</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-muted)">평균 상환금액</div>
+            <div style="font-size:14px;font-weight:600;color:#5dade2">182,400원</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">평균 대출총액 대비</div>
+            <div style="font-size:12px;color:#5dade2">3.6%</div>
+          </div>
+        </div>
+      </div>
+      <div class="section-card" style="border-color:#f1c40f44;">
+        <div style="padding:14px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">단기 연체 D6~14</div>
+          <div style="font-size:22px;font-weight:700;color:#f1c40f">31건</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">반복 발생 채권</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-muted)">평균 상환금액</div>
+            <div style="font-size:14px;font-weight:600;color:#f1c40f">341,800원</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">평균 대출총액 대비</div>
+            <div style="font-size:12px;color:#f1c40f">5.1%</div>
+          </div>
+        </div>
+      </div>
+      <div class="section-card" style="border-color:#e67e2244;">
+        <div style="padding:14px;">
+          <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">단기 연체 D15~29</div>
+          <div style="font-size:22px;font-weight:700;color:#e67e22">18건</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">반복 발생 채권</div>
+          <div style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);">
+            <div style="font-size:11px;color:var(--text-muted)">평균 상환금액</div>
+            <div style="font-size:14px;font-weight:600;color:#e67e22">628,500원</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">평균 대출총액 대비</div>
+            <div style="font-size:12px;color:#e67e22">7.8%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 고빈도 채권 목록 -->
+    <div style="padding:8px 18px 8px;">
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">고빈도 반복 채권 TOP 10 (단기연체 횟수 기준)</div>
+      <div class="table-wrap">
+        <table id="repeatTable">
+          <thead>
+            <tr>
+              <th>bond_uid</th>
+              <th>deal_uid</th>
+              <th class="num">반복 횟수</th>
+              <th class="num">주요 구간</th>
+              <th class="num">평균 지연일</th>
+              <th class="num">평균 상환금</th>
+              <th class="num">대출총액</th>
+              <th class="num">대출총액 대비</th>
+            </tr>
+          </thead>
+          <tbody id="repeatTbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="sql-panel" style="margin:8px 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>단기 연체 반복 쿼리 (회차별 지연일수 기반)</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="cmt">-- b_repayment_charged: actual_repayment_date - adjusted_repayment_date = 지연일수</span>
+<span class="kw">SELECT</span>
+    rc.bond_uid,
+    <span class="fn">COUNT</span>(*) <span class="kw">AS</span> late_seq_count,       <span class="cmt">-- 지연 발생 회차 수</span>
+    <span class="fn">AVG</span>(delay_days)  <span class="kw">AS</span> avg_delay_days,
+    <span class="fn">SUM</span>(rp.repaid_amt) <span class="kw">AS</span> total_repaid,
+    <span class="fn">AVG</span>(rp.repaid_amt) <span class="kw">AS</span> avg_repaid_per_seq,
+    b.amount          <span class="kw">AS</span> loan_amount,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(rp.repaid_amt) / b.amount * <span class="num-lit">100</span>, <span class="num-lit">1</span>) <span class="kw">AS</span> avg_repaid_pct
+<span class="kw">FROM</span> (
+    <span class="kw">SELECT</span>
+        bond_uid,
+        deal_repayment_seq,
+        <span class="fn">DATEDIFF</span>(actual_repayment_date, adjusted_repayment_date) <span class="kw">AS</span> delay_days
+    <span class="kw">FROM</span> b_repayment_charged
+    <span class="kw">WHERE</span>
+        actual_repayment_date <span class="kw">IS NOT NULL</span>
+        <span class="kw">AND</span> actual_repayment_date > adjusted_repayment_date
+        <span class="kw">AND</span> <span class="fn">DATEDIFF</span>(actual_repayment_date, adjusted_repayment_date) < <span class="num-lit">30</span> <span class="cmt">-- 단기만</span>
+) rc
+<span class="kw">JOIN</span> tb_lo_bond b <span class="kw">ON</span> rc.bond_uid = b.uid
+<span class="kw">LEFT JOIN</span> (
+    <span class="kw">SELECT</span> bond_uid, deal_repayment_seq,
+           <span class="fn">SUM</span>(principal + interest + late_fee) <span class="kw">AS</span> repaid_amt
+    <span class="kw">FROM</span> b_repayment_paid
+    <span class="kw">GROUP BY</span> bond_uid, deal_repayment_seq
+) rp <span class="kw">ON</span> rc.bond_uid = rp.bond_uid <span class="kw">AND</span> rc.deal_repayment_seq = rp.deal_repayment_seq
+<span class="kw">GROUP BY</span> rc.bond_uid, b.amount
+<span class="kw">HAVING</span> late_seq_count >= <span class="num-lit">2</span>       <span class="cmt">-- 2회 이상 반복</span>
+<span class="kw">ORDER BY</span> late_seq_count <span class="kw">DESC</span>
+<span class="kw">LIMIT</span> <span class="num-lit">50</span>;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 5. 개인회생 채권 대출실행 월 분포 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">⑤ 개인회생 채권 대출실행 월 분포</div>
+        <div class="section-subtitle">d_debt_relief(type=1) · 과거 12개월 당월 제외 (2025-06~2026-05) · 기표월별 건수 / 평균 금리 / 등급</div>
+      </div>
+    </div>
+    <div style="padding:14px 18px 4px;">
+      <canvas id="revivalOriginChart" style="max-height:200px;"></canvas>
+    </div>
+    <div style="padding:8px 18px 8px;">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>기표월 (tb_lo_bond.start_date)</th>
+              <th class="num">건수</th>
+              <th class="num">평균 금리 (%)</th>
+              <th class="num">평균 HF 등급</th>
+              <th class="num">평균 대출금액</th>
+              <th class="num">개회생 비율</th>
+            </tr>
+          </thead>
+          <tbody id="revivalOriginTbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div style="margin:4px 18px 14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text-muted);">
+      <strong style="color:var(--text)">Join 경로:</strong> d_debt_relief → p_deal → tb_lo_bond.start_date (기표일) / tb_lo_apply → l_credit_apply.rate (금리) / l_limit_calculation.hf_grade_final (최종 등급)
+    </div>
+    <div class="sql-panel" style="margin:0 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>개인회생 기표월 분포 쿼리</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="kw">SELECT</span>
+    <span class="fn">DATE_FORMAT</span>(b.start_date, <span class="str">'%Y-%m'</span>)         <span class="kw">AS</span> origination_month,
+    <span class="fn">COUNT</span>(*)                                   <span class="kw">AS</span> cnt,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(ca.rate) * <span class="num-lit">100</span>, <span class="num-lit">2</span>)            <span class="kw">AS</span> avg_rate_pct,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(lc.hf_grade_final), <span class="num-lit">1</span>)         <span class="kw">AS</span> avg_hf_grade,
+    <span class="fn">ROUND</span>(<span class="fn">AVG</span>(b.amount), <span class="num-lit">0</span>)                 <span class="kw">AS</span> avg_loan_amount
+<span class="kw">FROM</span> d_debt_relief dr
+<span class="kw">JOIN</span> p_deal d          <span class="kw">ON</span> dr.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_bond b      <span class="kw">ON</span> b.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_apply la    <span class="kw">ON</span> d.loan_apply_uid = la.uid
+<span class="kw">LEFT JOIN</span> l_credit_apply ca
+    <span class="kw">ON</span> la.uid = ca.apply_uid
+<span class="kw">LEFT JOIN</span> l_limit_calculation lc
+    <span class="kw">ON</span> ca.apply_uid = lc.credit_apply_uid
+<span class="kw">WHERE</span>
+    dr.type = <span class="num-lit">1</span>
+    <span class="kw">AND</span> dr.deleted_datetime <span class="kw">IS NULL</span>
+    <span class="kw">AND</span> la.loan_product_type = <span class="num-lit">1</span>   <span class="cmt">-- 개인신용대출</span>
+<span class="kw">GROUP BY</span> origination_month
+<span class="kw">ORDER BY</span> origination_month;</pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 6. 당월 연체채권 대출실행 월 분포 ── -->
+  <div class="section-card section-mb">
+    <div class="section-header">
+      <div>
+        <div class="section-title">⑥ 당월 연체채권 대출실행 월 분포</div>
+        <div class="section-subtitle">현재 연체 중인 77건 · tb_lo_bond.start_date 기표월별 분포 · 과거 18개월 당월 제외 (2024-12~2026-05)</div>
+      </div>
+    </div>
+    <div style="display:grid;grid-template-columns:3fr 1fr;gap:16px;padding:14px 18px;">
+      <div>
+        <canvas id="vintageChart" style="max-height:200px;"></canvas>
+      </div>
+      <div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px;">빈티지 요약</div>
+        <div class="sum-row"><div class="sum-key">최다 연체 기표월</div><div class="sum-val" style="color:var(--red)">2024-09</div></div>
+        <div class="sum-row"><div class="sum-key">해당 월 연체 건수</div><div class="sum-val">11건</div></div>
+        <div class="sum-row"><div class="sum-key">평균 경과 기간</div><div class="sum-val">21개월</div></div>
+        <div class="sum-row"><div class="sum-key">2024년 기표 비중</div><div class="sum-val" style="color:var(--orange)">54.5%</div></div>
+        <div class="sum-row"><div class="sum-key">2025년 기표 비중</div><div class="sum-val" style="color:var(--yellow)">32.5%</div></div>
+        <div class="sum-row"><div class="sum-key">2026년 기표 비중</div><div class="sum-val" style="color:var(--accent)">13.0%</div></div>
+      </div>
+    </div>
+    <div style="margin:0 18px 14px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:11px;color:var(--text-muted);">
+      <strong style="color:var(--text)">빈티지 해석:</strong> 특정 기표월 집중 시 해당 시기 심사 기준·금리 정책 재검토 필요. 2024년 하반기 기표 채권이 연체 편중 여부 주목.
+    </div>
+    <div class="sql-panel" style="margin:0 18px 16px;border:none;background:var(--bg3);">
+      <div class="sql-header" onclick="toggleSql(this)"><span>당월 연체채권 기표월 분포 쿼리</span><span style="font-size:10px;">▸</span></div>
+      <div class="sql-body">
+<pre><span class="kw">SELECT</span>
+    <span class="fn">DATE_FORMAT</span>(b.start_date, <span class="str">'%Y-%m'</span>) <span class="kw">AS</span> origination_month,
+    <span class="fn">COUNT</span>(*)                          <span class="kw">AS</span> overdue_cnt,
+    <span class="fn">SUM</span>(b.amount - <span class="fn">COALESCE</span>(paid.total_paid, <span class="num-lit">0</span>))
+                                      <span class="kw">AS</span> outstanding_sum,
+<span class="kw">FROM</span> tb_lo_bond b
+<span class="kw">JOIN</span> p_deal d        <span class="kw">ON</span> b.deal_uid = d.deal_uid
+<span class="kw">JOIN</span> tb_lo_apply la  <span class="kw">ON</span> d.loan_apply_uid = la.uid
+<span class="kw">LEFT JOIN</span> (
+    <span class="kw">SELECT</span> bond_uid, <span class="fn">SUM</span>(principal) <span class="kw">AS</span> total_paid
+    <span class="kw">FROM</span> b_repayment_paid <span class="kw">GROUP BY</span> bond_uid
+) paid <span class="kw">ON</span> b.uid = paid.bond_uid
+<span class="kw">WHERE</span>
+    b.overdue_start_date <span class="kw">IS NOT NULL</span>
+    <span class="kw">AND</span> la.loan_product_type = <span class="num-lit">1</span>
+    <span class="kw">AND NOT EXISTS</span> (
+        <span class="kw">SELECT</span> <span class="num-lit">1</span> <span class="kw">FROM</span> b_repayment_sale s
+        <span class="kw">WHERE</span> s.bond_uid = b.uid <span class="kw">AND</span> s.is_whole_sale = <span class="num-lit">1</span>)
+<span class="kw">GROUP BY</span> origination_month
+<span class="kw">ORDER BY</span> origination_month;</pre>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+// ─────────────────────────────────────────
+// 특수채권 매각 건 포함/제외 토글
+// 기본: 제외 (b_repayment_sale 존재 채권 제외)
+// 활성: 포함 (NOT EXISTS 조건 제거)
+// ─────────────────────────────────────────
+const spData = {
+  excl: {  // 기본 (매각 제외)
+    s110:     { cnt: 3,  amt: '잔여원금 1.2억 · 34% <span style="color:var(--teal)">(매각예상가 0.4억)</span>' },
+    s120:     { cnt: 6,  amt: '잔여원금 3.7억 · 34% <span style="color:var(--teal)">(매각예상가 1.3억)</span>' },
+    s130:     { cnt: 11, amt: '잔여원금 5.1억 · 80% <span style="color:var(--teal)">(매각예상가 4.1억)</span>' },
+    폐지:     { cnt: 2,  amt: '잔여원금 0.8억' },
+    bankrupt: { cnt: 6,  amt: '잔여원금 합 2.3억' },
+    death:    { cnt: 3,  amt: '잔여원금 합 1.1억' },
+  },
+  incl: {  // 매각 포함 (b_repayment_sale 존재 채권 포함)
+    s110:     { cnt: 4,  amt: '잔여원금 1.6억 · 34% <span style="color:var(--teal)">(매각예상가 0.5억)</span>' },
+    s120:     { cnt: 9,  amt: '잔여원금 5.2억 · 34% <span style="color:var(--teal)">(매각예상가 1.8억)</span>' },
+    s130:     { cnt: 17, amt: '잔여원금 8.4억 · 80% <span style="color:var(--teal)">(매각예상가 6.7억)</span>' },
+    폐지:     { cnt: 3,  amt: '잔여원금 1.1억' },
+    bankrupt: { cnt: 10, amt: '잔여원금 합 4.1억' },
+    death:    { cnt: 5,  amt: '잔여원금 합 2.0억' },
+  }
+};
+let spIncludeSale = false;
+
+function toggleSpecialSale() {
+  spIncludeSale = !spIncludeSale;
+  const btn = document.getElementById('saleToggleBtn');
+  const d = spIncludeSale ? spData.incl : spData.excl;
+
+  // 버튼 스타일 토글
+  if (spIncludeSale) {
+    btn.style.background    = '#6c7bff22';
+    btn.style.borderColor   = 'var(--accent)';
+    btn.style.color         = 'var(--accent)';
+    btn.innerHTML           = '✓ 매각 건 포함';
+  } else {
+    btn.style.background    = 'transparent';
+    btn.style.borderColor   = '#8b90a855';
+    btn.style.color         = 'var(--text-muted)';
+    btn.innerHTML           = '매각 건 포함';
+  }
+
+  // 숫자/금액 업데이트
+  document.getElementById('sp-110-cnt').textContent  = d.s110.cnt + '건';
+  document.getElementById('sp-110-amt').innerHTML  = d.s110.amt;
+  document.getElementById('sp-120-cnt').textContent  = d.s120.cnt + '건';
+  document.getElementById('sp-120-amt').innerHTML  = d.s120.amt;
+  document.getElementById('sp-130-cnt').textContent  = d.s130.cnt + '건';
+  document.getElementById('sp-130-amt').innerHTML  = d.s130.amt;
+  document.getElementById('sp-폐지-cnt').textContent = d['폐지'].cnt + '건';
+  document.getElementById('sp-폐지-amt').textContent = d['폐지'].amt;
+  document.getElementById('sp-bankrupt-cnt').textContent = d.bankrupt.cnt + '건';
+  document.getElementById('sp-bankrupt-amt').textContent = d.bankrupt.amt;
+  document.getElementById('sp-death-cnt').textContent    = d.death.cnt + '건';
+  document.getElementById('sp-death-amt').textContent    = d.death.amt;
+}
+
+// ── 샘플 데이터 (77건 시뮬레이션) ──
+const grades = ['A1','A2','A3','B1','B2','B3','C1','C2','C3','D1','D2'];
+const specialTypes = ['개인회생(130)','개인회생(120)','개인회생(110)','파산면책','사망/상속',null,null,null,null,null];
+const niceStatus = ['등록','등록','등록','미등록(회생)','미등록(회생)','등록','등록'];
+const kcbStatus = ['보고','보고','미보고(회생)','보고'];
+
+function rand(min, max) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function fmt(n) { return n.toLocaleString('ko-KR'); }
+function fmtM(n) { return (n/100000000).toFixed(1) + '억'; }
+
+function makeDate(daysAgo) {
+  const d = new Date('2026-06-26');
+  d.setDate(d.getDate() - daysAgo);
+  return d.toISOString().slice(0,10);
+}
+
+const bonds = [];
+// D1-29: 15건
+for(let i=0;i<15;i++){
+  const days = rand(1,29);
+  const amt = rand(500,3000) * 10000;
+  const paid = rand(0, Math.floor(amt*0.4));
+  const bal = amt - paid;
+  bonds.push({deal:rand(3000,5000),bond:rand(10000,20000),grade:grades[rand(0,grades.length-1)],date:makeDate(days),days,amt,bal,special:null,status:null,nice:niceStatus[rand(0,niceStatus.length-1)],kcb:kcbStatus[rand(0,kcbStatus.length-1)],accel:null,overdueSeq:Math.max(1,Math.floor(days/30)),totalOverdue:Math.round(Math.floor(days/30)*amt/36)});
+}
+// D30-59: 21건
+for(let i=0;i<21;i++){
+  const days = rand(30,59);
+  const amt = rand(500,5000) * 10000;
+  const paid = rand(0, Math.floor(amt*0.5));
+  const bal = amt - paid;
+  const sp = i < 3 ? specialTypes[rand(2,4)] : null;
+  const st = sp ? (sp.includes('130')?'130':sp.includes('120')?'120':'110') : null;
+  bonds.push({deal:rand(3000,5000),bond:rand(10000,20000),grade:grades[rand(0,grades.length-1)],date:makeDate(days),days,amt,bal,special:sp,status:st,nice:sp?'미등록('+sp+')':niceStatus[rand(0,2)],kcb:sp?'미보고':kcbStatus[rand(0,1)],accel:days>=90&&rand(0,2)===0?makeDate(rand(1,days)):null,overdueSeq:Math.max(1,Math.floor(days/30)),totalOverdue:Math.round(Math.floor(days/30)*amt/36)});
+}
+// D60-89: 17건
+for(let i=0;i<17;i++){
+  const days = rand(60,89);
+  const amt = rand(1000,6000) * 10000;
+  const paid = rand(0, Math.floor(amt*0.5));
+  const bal = amt - paid;
+  const sp = i < 5 ? specialTypes[rand(0,4)] : null;
+  const st = sp ? (sp.includes('130')?'130':sp.includes('120')?'120':'110') : null;
+  bonds.push({deal:rand(3000,5000),bond:rand(10000,20000),grade:grades[rand(0,grades.length-1)],date:makeDate(days),days,amt,bal,special:sp,status:st,nice:sp?'미등록':niceStatus[rand(0,2)],kcb:sp?'미보고':kcbStatus[rand(0,1)],accel:days>=90&&rand(0,2)===0?makeDate(rand(1,days)):null,overdueSeq:Math.max(1,Math.floor(days/30)),totalOverdue:Math.round(Math.floor(days/30)*amt/36)});
+}
+// D90-179: 11건
+for(let i=0;i<11;i++){
+  const days = rand(90,179);
+  const amt = rand(1000,8000) * 10000;
+  const paid = rand(0, Math.floor(amt*0.5));
+  const bal = amt - paid;
+  const sp = i < 7 ? specialTypes[rand(0,4)] : null;
+  const st = sp ? (sp.includes('130')?'130':sp.includes('120')?'120':'110') : null;
+  bonds.push({deal:rand(3000,5000),bond:rand(10000,20000),grade:grades[rand(0,grades.length-1)],date:makeDate(days),days,amt,bal,special:sp,status:st,nice:sp?'미등록':niceStatus[rand(0,2)],kcb:sp?'미보고':kcbStatus[rand(0,1)],accel:days>=90&&rand(0,2)===0?makeDate(rand(1,days)):null,overdueSeq:Math.max(1,Math.floor(days/30)),totalOverdue:Math.round(Math.floor(days/30)*amt/36)});
+}
+// D180+: 13건
+for(let i=0;i<13;i++){
+  const days = rand(180,600);
+  const amt = rand(1000,10000) * 10000;
+  const paid = rand(0, Math.floor(amt*0.4));
+  const bal = amt - paid;
+  const sp = i < 8 ? specialTypes[rand(0,4)] : null;
+  const st = sp ? (sp.includes('130')?'130':sp.includes('120')?'120':'110') : null;
+  bonds.push({deal:rand(3000,5000),bond:rand(10000,20000),grade:grades[rand(0,grades.length-1)],date:makeDate(days),days,amt,bal,special:sp,status:st,nice:sp?'미등록':niceStatus[rand(0,2)],kcb:sp?'미보고':kcbStatus[rand(0,1)],accel:days>=90&&rand(0,2)===0?makeDate(rand(1,days)):null,overdueSeq:Math.max(1,Math.floor(days/30)),totalOverdue:Math.round(Math.floor(days/30)*amt/36)});
+}
+
+// 연체일수 내림차순 정렬
+bonds.sort((a,b) => b.days - a.days);
+
+function calcSalePrice(b) {
+  if (b.status === '130') return Math.round(b.bal * 0.80);
+  if (b.status === '120' || b.status === '110') return Math.round(b.bal * 0.34);
+  if (!b.special && b.days >= 30) return Math.round(b.bal * 0.25);
+  return null;
+}
+
+function dayClass(d) {
+  if (d >= 180) return 'overdue-days days-danger';
+  if (d >= 90)  return 'overdue-days days-warn';
+  if (d >= 30)  return 'overdue-days days-caution';
+  return 'overdue-days days-ok';
+}
+
+function statusBadge(st, sp) {
+  if (!sp) return '<span class="status-badge s-none">일반연체</span>';
+  if (st==='130') return '<span class="status-badge s-130">인가확정</span>';
+  if (st==='120') return '<span class="status-badge s-120">개시결정</span>';
+  if (st==='110') return '<span class="status-badge s-110">접수/금지명령</span>';
+  return '<span class="status-badge s-normal">'+sp+'</span>';
+}
+
+let currentPage = 1;
+const perPage = 20;
+
+function renderTable(data, page) {
+  const tbody = document.getElementById('bondTbody');
+  const start = (page-1)*perPage;
+  const slice = data.slice(start, start+perPage);
+  tbody.innerHTML = slice.map(b => {
+    const sp = calcSalePrice(b);
+    return `<tr>
+      <td class="font-mono">#${b.deal}</td>
+      <td class="font-mono muted">#${b.bond}</td>
+      <td><span class="chip">${b.grade}</span></td>
+      <td class="muted">${b.date}</td>
+      <td class="${dayClass(b.days)}">${b.days}일</td>
+      <td class="num">${fmt(b.amt)}</td>
+      <td class="num" style="font-weight:600">${fmt(b.bal)}</td>
+      <td>${b.special ? '<span style="font-size:10px;color:var(--orange)">'+b.special+'</span>' : '<span class="muted" style="font-size:10px">—</span>'}</td>
+      <td>${statusBadge(b.status, b.special)}</td>
+      <td class="num" style="color:var(--teal)">${sp ? fmt(sp) : '<span class="muted">—</span>'}</td>
+      <td class="muted" style="font-size:10px">${b.accel ? '<span style="color:var(--orange)">'+b.accel+'</span>' : '—'}</td>
+      <td class="num">${b.overdueSeq}회</td>
+      <td class="num" style="color:var(--red)">${fmt(b.totalOverdue)}</td>
+      <td><span style="font-size:10px;color:${b.nice.includes('미')? 'var(--text-muted)':'var(--green)'}">${b.nice}</span></td>
+      <td><span style="font-size:10px;color:${b.kcb.includes('미')? 'var(--text-muted)':'var(--accent)'}">${b.kcb}</span></td>
+    </tr>`;
+  }).join('');
+  document.getElementById('pageInfo').textContent = `${start+1} - ${Math.min(start+perPage,data.length)} / ${data.length}건`;
+}
+
+renderTable(bonds, 1);
+
+function goPage(p) {
+  currentPage = p;
+  renderTable(bonds, p);
+  document.querySelectorAll('.page-btn').forEach((btn,i) => {
+    btn.classList.toggle('active', i+1===p);
+  });
+}
+
+// 탭 전환
+function switchTab(e, tab) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  e.target.classList.add('active');
+  let filtered;
+  if (tab === 'all') filtered = bonds;
+  else if (tab === 'special') filtered = bonds.filter(b => b.special);
+  else if (tab === 'normal') filtered = bonds.filter(b => !b.special);
+  else if (tab === 'risk') filtered = bonds.filter(b => b.days >= 90);
+  // 특수채권 필터: 전체/특수채권 탭에만 노출
+  const showSp = (tab === 'all' || tab === 'special');
+  document.querySelectorAll('.sp-filter-group').forEach(el => {
+    el.style.display = showSp ? '' : 'none';
+  });
+  // 일반연체 탭 전환 시 연체구간 필터 초기화
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  document.querySelector('.filter-btn').classList.add('active');
+  renderTable(filtered, 1);
+}
+
+// 필터 버튼
+function setFilter(el, type) {
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  let filtered;
+  if (type==='all') filtered = bonds;
+  else if (type==='d30') filtered = bonds.filter(b => b.days >= 30);
+  else if (type==='d90') filtered = bonds.filter(b => b.days >= 90);
+  else if (type==='d180') filtered = bonds.filter(b => b.days >= 180);
+  else if (type==='revival') filtered = bonds.filter(b => b.special && b.special.includes('회생'));
+  else if (type==='bankrupt') filtered = bonds.filter(b => b.special && b.special.includes('파산'));
+  else if (type==='death') filtered = bonds.filter(b => b.special && (b.special.includes('사망') || b.special.includes('상속')));
+  renderTable(filtered, 1);
+}
+
+// SQL 토글
+function toggleSql(header) {
+  const body = header.nextElementSibling;
+  const isOpen = body.classList.contains('open');
+  body.classList.toggle('open', !isOpen);
+  header.classList.toggle('open', !isOpen);
+  header.querySelector('span:last-child').textContent = isOpen ? '▸' : '▾';
+}
+
+// ─────────────────────────────────────────
+// ③ 30일 상환완료율 추이 차트
+// ─────────────────────────────────────────
+const repayCtx30 = document.getElementById('repayChart30').getContext('2d');
+new Chart(repayCtx30, {
+  type: 'line',
+  data: {
+    labels: ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'],
+    datasets: [
+      {
+        label: '30일 상환완료율 (%)',
+        data: [34.2, 31.8, 29.5, 27.3, 30.1, 28.9],
+        borderColor: '#2ecc71',
+        backgroundColor: 'rgba(46,204,113,0.1)',
+        pointBackgroundColor: '#2ecc71',
+        tension: 0.4,
+        fill: true,
+      },
+      {
+        label: '모수 (연체발생 건)',
+        data: [29, 33, 37, 41, 36, 38],
+        borderColor: '#5dade2',
+        backgroundColor: 'transparent',
+        pointBackgroundColor: '#5dade2',
+        tension: 0.4,
+        borderDash: [4,3],
+        yAxisID: 'y1',
+      }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:'#8b90a8', font:{size:11} } } },
+    scales:{
+      x:{ ticks:{color:'#8b90a8',font:{size:10}}, grid:{color:'#2e3350'} },
+      y:{ ticks:{color:'#2ecc71',font:{size:10}}, grid:{color:'#2e3350'}, position:'left',
+          min:0, max:50 },
+      y1:{ ticks:{color:'#5dade2',font:{size:10}}, grid:{display:false}, position:'right' }
+    }
+  }
+});
+
+// ─────────────────────────────────────────
+// ④ 단기 연체 반복 — 고빈도 채권 테이블
+// ─────────────────────────────────────────
+const repeatData = [
+  {bond:11284,deal:3821,cnt:7,band:'D1~5',avgDays:3.2,avgAmt:154000,loanAmt:5000000},
+  {bond:12093,deal:4102,cnt:6,band:'D6~14',avgDays:9.1,avgAmt:287000,loanAmt:8000000},
+  {bond:10874,deal:3654,cnt:6,band:'D1~5',avgDays:2.8,avgAmt:98000,loanAmt:3000000},
+  {bond:15321,deal:4891,cnt:5,band:'D15~29',avgDays:21.4,avgAmt:612000,loanAmt:10000000},
+  {bond:13004,deal:4210,cnt:5,band:'D6~14',avgDays:11.2,avgAmt:334000,loanAmt:7500000},
+  {bond:11742,deal:3980,cnt:4,band:'D6~14',avgDays:8.7,avgAmt:295000,loanAmt:6000000},
+  {bond:14567,deal:4540,cnt:4,band:'D1~5',avgDays:3.9,avgAmt:167000,loanAmt:4000000},
+  {bond:12388,deal:4033,cnt:4,band:'D15~29',avgDays:18.6,avgAmt:571000,loanAmt:9000000},
+  {bond:16012,deal:5001,cnt:3,band:'D6~14',avgDays:10.3,avgAmt:312000,loanAmt:7000000},
+  {bond:13891,deal:4320,cnt:3,band:'D1~5',avgDays:4.1,avgAmt:143000,loanAmt:3500000},
+];
+const bandColors = {'D1~5':'#5dade2','D6~14':'#f1c40f','D15~29':'#e67e22'};
+document.getElementById('repeatTbody').innerHTML = repeatData.map(r => `<tr>
+  <td class="font-mono">#${r.bond}</td>
+  <td class="font-mono muted">#${r.deal}</td>
+  <td class="num" style="font-weight:700;color:var(--red)">${r.cnt}회</td>
+  <td class="num"><span class="status-badge" style="background:${bandColors[r.band]}22;color:${bandColors[r.band]};border:1px solid ${bandColors[r.band]}44">${r.band}</span></td>
+  <td class="num">${r.avgDays.toFixed(1)}일</td>
+  <td class="num">${r.avgAmt.toLocaleString()}원</td>
+  <td class="num">${r.loanAmt.toLocaleString()}원</td>
+  <td class="num" style="color:${bandColors[r.band]};font-weight:600">${(r.avgAmt/r.loanAmt*100).toFixed(1)}%</td>
+</tr>`).join('');
+
+// ─────────────────────────────────────────
+// ⑤ 개인회생 기표월 분포 차트 + 테이블
+// ─────────────────────────────────────────
+const revivalMonths = ['2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'];
+const revivalCnts =   [2, 2, 3, 4, 4, 5, 3, 3, 2, 3, 2, 2];
+const revivalRates =  [15.2, 15.8, 16.1, 16.4, 17.2, 18.2, 17.5, 17.0, 16.8, 16.4, 15.9, 15.5];
+const revivalGrades = [3.3, 3.4, 3.5, 3.7, 3.9, 4.3, 4.0, 3.9, 3.8, 3.7, 3.5, 3.4];
+const revivalAmts =   [4600000,4700000,4800000,5000000,5200000,6200000,5900000,5600000,5400000,5200000,4900000,4700000];
+
+const revCtx = document.getElementById('revivalOriginChart').getContext('2d');
+new Chart(revCtx, {
+  type: 'bar',
+  data: {
+    labels: revivalMonths,
+    datasets: [
+      {
+        label: '개인회생 건수',
+        data: revivalCnts,
+        backgroundColor: 'rgba(231,76,60,0.6)',
+        borderColor: '#e74c3c',
+        borderWidth:1,
+        borderRadius:4,
+        yAxisID:'y',
+      },
+      {
+        label: '평균 금리 (%)',
+        data: revivalRates,
+        type:'line',
+        borderColor:'#f1c40f',
+        backgroundColor:'transparent',
+        pointBackgroundColor:'#f1c40f',
+        tension:0.4,
+        yAxisID:'y1',
+      }
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:'#8b90a8',font:{size:11} } } },
+    scales:{
+      x:{ ticks:{color:'#8b90a8',font:{size:10}}, grid:{color:'#2e3350'} },
+      y:{ ticks:{color:'#e74c3c',font:{size:10}}, grid:{color:'#2e3350'}, position:'left' },
+      y1:{ ticks:{color:'#f1c40f',font:{size:10}}, grid:{display:false}, position:'right', min:10, max:25 }
+    }
+  }
+});
+
+// 개인회생 테이블
+const gradeLabels = {1:'A1',2:'A2',3:'A3',4:'B1',5:'B2',6:'B3',7:'C1',8:'C2'};
+document.getElementById('revivalOriginTbody').innerHTML = revivalMonths.map((m,i) => {
+  const totalInMonth = 30; // 해당월 전체 기표 건수 (mock)
+  return `<tr>
+    <td>${m}</td>
+    <td class="num">${revivalCnts[i]}건</td>
+    <td class="num" style="color:#f1c40f">${revivalRates[i]}%</td>
+    <td class="num"><span class="chip">${gradeLabels[Math.round(revivalGrades[i])] || 'B1'}</span> (평균 ${revivalGrades[i]})</td>
+    <td class="num">${revivalAmts[i].toLocaleString()}원</td>
+    <td class="num" style="color:var(--orange)">${(revivalCnts[i]/totalInMonth*100).toFixed(1)}%</td>
+  </tr>`;
+}).join('');
+
+// ─────────────────────────────────────────
+// ⑥ 당월 연체채권 대출실행 월(빈티지) 분포
+// ─────────────────────────────────────────
+const vintageMonths = ['2024-12','2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03','2026-04','2026-05'];
+const vintageCnts =   [3, 3, 4, 5, 5, 6, 7, 8, 9, 11, 10, 8, 7, 6, 5, 5, 4, 3];
+const vintageAmts =   [0.4,0.7,0.9,1.1,1.6,2.8,2.4,2.1,1.9,1.5,1.2,2.4]; // 억
+const vintageOutstanding= [2.8,2.5,3.1,3.8,4.2,5.0,6.1,7.2,8.4,10.3,9.1,7.2,6.4,5.5,4.6,4.8,3.7,2.9]; // 잔여원금 합계 (억)
+
+const vtxCtx = document.getElementById('vintageChart').getContext('2d');
+new Chart(vtxCtx, {
+  type:'bar',
+  data:{
+    labels: vintageMonths,
+    datasets:[
+      {
+        label:'연체 건수',
+        data: vintageCnts,
+        backgroundColor: vintageMonths.map((_,i)=> {
+          if(i<=2) return 'rgba(155,89,182,0.7)';
+          if(i<=5) return 'rgba(231,76,60,0.7)';
+          if(i<=8) return 'rgba(230,126,34,0.7)';
+          return 'rgba(108,123,255,0.7)';
+        }),
+        borderRadius:4,
+        yAxisID:'y',
+      },
+      {
+        label:'잔여원금 합계 (억)',
+        data: vintageOutstanding,
+        type:'line',
+        borderColor:'#1abc9c',
+        backgroundColor:'transparent',
+        pointBackgroundColor:'#1abc9c',
+        tension:0.4,
+        yAxisID:'y1',
+      }
+    ]
+  },
+  options:{
+    responsive:true,maintainAspectRatio:true,
+    plugins:{ legend:{ labels:{ color:'#8b90a8',font:{size:11} } } },
+    scales:{
+      x:{ ticks:{color:'#8b90a8',font:{size:9},maxRotation:45}, grid:{color:'#2e3350'} },
+      y:{ ticks:{color:'#6c7bff',font:{size:10}}, grid:{color:'#2e3350'}, position:'left' },
+      y1:{ ticks:{color:'#1abc9c',font:{size:10}, callback:v=>v+'억'}, grid:{display:false}, position:'right', min:0, max:12 }
+    }
+  }
+});
+
+// ── 차트: 월별 연체 트렌드 ──
+const trendCtx = document.getElementById('trendChart').getContext('2d');
+new Chart(trendCtx, {
+  type: 'bar',
+  data: {
+    labels: ['2026-01','2026-02','2026-03','2026-04','2026-05','2026-06'],
+    datasets: [
+      {
+        label: '신규 연체 (건)',
+        data: [12, 9, 15, 11, 18, 14],
+        backgroundColor: 'rgba(108,123,255,0.7)',
+        borderRadius: 4,
+        yAxisID: 'y',
+      },
+      {
+        label: '누적 잔여원금 (억)',
+        data: [18.2, 20.1, 22.4, 24.8, 27.1, 28.4],
+        type: 'line',
+        borderColor: '#e74c3c',
+        backgroundColor: 'rgba(231,76,60,0.1)',
+        pointBackgroundColor: '#e74c3c',
+        tension: 0.4,
+        fill: true,
+        yAxisID: 'y1',
+      }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: '#8b90a8', font: { size: 11 } } }
+    },
+    scales: {
+      x: { ticks: { color: '#8b90a8', font:{size:10} }, grid: { color: '#2e3350' } },
+      y: { ticks: { color: '#8b90a8', font:{size:10} }, grid: { color: '#2e3350' }, position:'left' },
+      y1: { ticks: { color: '#e74c3c', font:{size:10} }, grid: { display:false }, position:'right' }
+    }
+  }
+});
+
+// ── 차트: 특수채권 도넛 ──
+const specialCtx = document.getElementById('specialChart').getContext('2d');
+// M-2=2026-04, M-1=2026-05, M-0=2026-06 (당월)
+new Chart(specialCtx, {
+  type: 'bar',
+  data: {
+    labels: ['개인회생(인가확정)', '개인회생(개시결정)', '개인회생(접수/금지)', '개인회생(폐지)', '파산면책', '사망/상속'],
+    datasets: [
+      { label: 'M-2 (2026-04)', data: [460, 330, 100, 70, 210, 90], backgroundColor: '#6c7bff55', borderColor: '#6c7bff', borderWidth: 1, borderRadius: 3 },
+      { label: 'M-1 (2026-05)', data: [490, 355, 110, 75, 220, 100], backgroundColor: '#5dade255', borderColor: '#5dade2', borderWidth: 1, borderRadius: 3 },
+      { label: 'M-0 (2026-06)', data: [510, 370, 120, 80, 230, 110], backgroundColor: '#2ecc7155', borderColor: '#2ecc71', borderWidth: 1, borderRadius: 3 },
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: '#8b90a8', font: { size: 10 }, padding: 8, boxWidth: 10 } },
+      tooltip: { callbacks: { label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y}백만원` } }
+    },
+    scales: {
+      x: { ticks: { color: '#8b90a8', font: { size: 9 }, maxRotation: 25 }, grid: { color: '#2e3350' } },
+      y: { ticks: { color: '#8b90a8', font: { size: 10 }, callback: v => v+'M' }, grid: { color: '#2e3350' } }
+    }
+  }
+});
+
+// ─────────────────────────────────────────
+// ② 연체 해소율 — 코호트 생존 테이블 + 차트
+// ─────────────────────────────────────────
+const resolutionCohorts = [
+  {month:'2026-03', total:14, rate:16.8, grade:'B2', r30:12, r60:10, r90:8,  r180:null},
+  {month:'2026-02', total:18, rate:17.2, grade:'B1', r30:15, r60:12, r90:10, r180:null},
+  {month:'2026-01', total:11, rate:15.9, grade:'B2', r30: 9, r60: 7, r90:6,  r180:null},
+  {month:'2025-12', total:16, rate:17.5, grade:'B1', r30:13, r60:10, r90:8,  r180:6},
+  {month:'2025-11', total:12, rate:18.2, grade:'C1', r30:10, r60: 8, r90:7,  r180:5},
+  {month:'2025-10', total:19, rate:16.4, grade:'B2', r30:16, r60:13, r90:11, r180:8},
+  {month:'2025-09', total:15, rate:15.8, grade:'B3', r30:13, r60:10, r90:8,  r180:6},
+  {month:'2025-08', total:10, rate:16.1, grade:'B2', r30: 8, r60: 6, r90:5,  r180:3},
+];
+
+function resRate(total, remain) {
+  if (remain === null) return '<span class="muted">—</span>';
+  const rate = ((total - remain) / total * 100).toFixed(1);
+  const color = rate >= 40 ? 'var(--green)' : rate >= 20 ? 'var(--yellow)' : 'var(--red)';
+  return `<span style="color:${color};font-weight:700">${rate}%</span>`;
+}
+
+document.getElementById('resolutionTbody').innerHTML = resolutionCohorts.map(c => `<tr>
+  <td style="font-weight:600">${c.month}</td>
+  <td class="num">${c.total}건</td>
+  <td class="num" style="color:var(--yellow)">${c.rate}%</td>
+  <td class="num"><span class="chip">${c.grade}</span></td>
+  <td class="num" style="color:var(--text-muted)">${c.r30}건</td>
+  <td class="num">${resRate(c.total, c.r30)}</td>
+  <td class="num" style="color:var(--text-muted)">${c.r60}건</td>
+  <td class="num">${resRate(c.total, c.r60)}</td>
+  <td class="num" style="color:var(--text-muted)">${c.r90}건</td>
+  <td class="num">${resRate(c.total, c.r90)}</td>
+  <td class="num" style="color:var(--text-muted)">${c.r180 !== null ? c.r180 + '건' : '<span class=\'muted\'>측정불가</span>'}</td>
+  <td class="num">${resRate(c.total, c.r180)}</td>
+</tr>`).join('');
+
+// 생존 곡선 차트
+const resCtx = document.getElementById('resolutionChart').getContext('2d');
+const recentCohorts = resolutionCohorts.slice(0, 5).reverse();
+new Chart(resCtx, {
+  type: 'line',
+  data: {
+    labels: ['D+0 (연체시작)', 'D+30', 'D+60', 'D+90'],
+    datasets: recentCohorts.map((c, i) => {
+      const palette = ['#5dade2','#f1c40f','#2ecc71','#e67e22','#9b59b6'];
+      return {
+        label: c.month,
+        data: [
+          100,
+          +(c.r30 / c.total * 100).toFixed(1),
+          +(c.r60 / c.total * 100).toFixed(1),
+          +(c.r90 / c.total * 100).toFixed(1),
+        ],
+        borderColor: palette[i],
+        backgroundColor: 'transparent',
+        pointBackgroundColor: palette[i],
+        tension: 0.3,
+        borderWidth: 2,
+      };
+    })
+  },
+  options: {
+    responsive: true, maintainAspectRatio: true,
+    plugins: {
+      legend: { labels: { color: '#8b90a8', font: { size: 11 } } },
+      tooltip: {
+        callbacks: {
+          label: ctx => ` ${ctx.dataset.label}: 잔존 ${ctx.parsed.y}%`
+        }
+      }
+    },
+    scales: {
+      x: { ticks: { color: '#8b90a8', font: { size: 10 } }, grid: { color: '#2e3350' } },
+      y: {
+        min: 0, max: 100,
+        ticks: {
+          color: '#8b90a8', font: { size: 10 },
+          callback: v => v + '%'
+        },
+        grid: { color: '#2e3350' }
+      }
+    }
+  }
+});
+</script>
+</body>
+</html>
