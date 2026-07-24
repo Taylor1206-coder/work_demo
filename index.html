@@ -2,621 +2,850 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>연체/특수채권 관리 — 사전감지 프로토타입 (v1.0, 세그먼트 A+B)</title>
+<title>채권 담당자 배정 관리</title>
 <style>
-  :root{
-    --header-blue:#3579d6;
-    --tab-active:#2f6fce;
-    --btn-green:#167a3b;
-    --btn-green-light:#86bb70;
-    --btn-blue:#2166c9;
-    --btn-blue-light:#8fb7e6;
-    --page-bg:#f4f4f2;
-    --border-color:#e0e0dd;
-    --text-dark:#222;
-    --text-mid:#555;
-    --text-mute:#888;
-    --badge-amber-bg:#fdeecb; --badge-amber-text:#8a5a00;
-    --badge-gray-bg:#ececea; --badge-gray-text:#666;
-    --badge-green-bg:#e1f3e6; --badge-green-text:#1b7a3d;
-    --badge-blue-bg:#e5f0fc; --badge-blue-text:#1c5fa8;
-    --badge-red-bg:#fdeaea; --badge-red-text:#b23b3b;
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+    background: #f5f6f8;
+    color: #222;
+    padding: 24px;
   }
-  *{box-sizing:border-box;}
-  body{
-    margin:0; padding:0; background:var(--page-bg);
-    font-family:"Malgun Gothic","Apple SD Gothic Neo",-apple-system,sans-serif;
-    color:var(--text-dark); font-size:13px;
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    overflow: hidden;
   }
-  .proto-banner{
-    background:#fff3cd; color:#7a5b00; font-size:12px; text-align:center;
-    padding:6px 0; border-bottom:1px solid #f0dca0; letter-spacing:.02em;
+  .header {
+    padding: 20px 24px;
+    border-bottom: 1px solid #eaecef;
   }
-  .topbar{
-    display:flex; align-items:center; justify-content:space-between;
-    background:#fff; border-bottom:1px solid var(--border-color);
-    padding:10px 20px; font-size:15px; font-weight:600;
-  }
-  .topbar .right{font-size:12px; font-weight:400; color:var(--text-mid); display:flex; gap:16px;}
-  .wrap{max-width:1560px; margin:0 auto; padding:18px 20px 60px;}
+  .header h1 { font-size: 18px; font-weight: 600; }
+  .header p { font-size: 13px; color: #6b7280; margin-top: 4px; }
 
-  .filter-card{
-    background:#fff; border:1px solid var(--border-color); border-radius:4px;
-    padding:14px 18px; display:flex; justify-content:space-between; align-items:flex-end; gap:20px; margin-bottom:14px;
+  .tabs {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #eaecef;
+    padding: 0 24px;
+    gap: 0;
   }
-  .filter-fields{display:flex; gap:26px; flex-wrap:wrap; align-items:flex-end;}
-  .field label{display:block; font-size:11px; color:var(--text-mute); margin-bottom:4px;}
-  .field .val{font-size:13px; color:var(--text-dark);}
-  .field input, .field select{
-    border:1px solid var(--border-color); border-radius:3px; padding:6px 8px; font-size:12px; min-width:130px;
+  .tab-group {
+    display: flex;
+    align-items: center;
   }
-  .chip-group{display:flex; gap:6px;}
-  .chip{
-    border:1px solid var(--border-color); border-radius:14px; padding:4px 10px; font-size:11px;
-    color:var(--text-mid); cursor:pointer; background:#fafafa; user-select:none;
+  .tab-group.tab-group-primary { flex: 1; }
+  .tab-divider {
+    width: 1px;
+    height: 22px;
+    background: #e5e7eb;
+    margin: 0 14px;
   }
-  .chip.active{background:var(--badge-amber-bg); color:var(--badge-amber-text); border-color:#eccf8f;}
-  .actions{display:flex; flex-direction:column; gap:8px; min-width:170px;}
-  .btn{
-    border:none; border-radius:3px; padding:9px 14px; font-size:12px; color:#fff; cursor:pointer; text-align:center; font-weight:600;
+  /* 기본(primary) 탭: 전체 / 30일미만 / 30일 이상 / 추심 금지 */
+  .tab {
+    padding: 14px 18px;
+    font-size: 14px;
+    color: #6b7280;
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
   }
-  .btn.green{background:var(--btn-green);}
-  .btn.blue{background:var(--btn-blue);}
-  .btn.blue-light{background:var(--btn-blue-light);}
-  .btn.red{background:var(--badge-red-text);}
-  .btn.gray{background:#8a8a86;}
-  .btn.amber{background:var(--badge-amber-text);}
+  .tab.active {
+    color: #2563eb;
+    border-bottom-color: #2563eb;
+    font-weight: 600;
+  }
+  .tab .count {
+    color: #9ca3af;
+    font-size: 12px;
+  }
+  .tab.active .count { color: #2563eb; }
 
-  .tabs{
-    display:flex; align-items:center; gap:0; border-bottom:1px solid var(--border-color); margin-bottom:0; overflow-x:auto;
+  /* 보조 탭 그룹: 채권변동요청 / 미배정 (강조형 pill 버튼, 색상으로 구분) */
+  .tab-pill {
+    padding: 7px 14px;
+    font-size: 13px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+    margin-left: 8px;
   }
-  .tab{
-    padding:10px 16px; font-size:13px; color:var(--text-mid); cursor:pointer; white-space:nowrap;
-    border-bottom:2px solid transparent; margin-bottom:-1px;
+  .tab-pill::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
   }
-  .tab.active{color:var(--tab-active); border-bottom-color:var(--tab-active); font-weight:600;}
-  .tab-divider{width:1px; height:22px; background:var(--border-color); margin:0 14px;}
-  .tab-special{
-    margin-left:auto; padding:7px 16px; font-size:13px; font-weight:600; white-space:nowrap; cursor:pointer;
-    background:var(--badge-amber-bg); color:var(--badge-amber-text); opacity:.6;
-    border:none; border-radius:16px; margin-bottom:6px;
+  .tab-pill .count {
+    font-size: 12px;
+    padding: 1px 7px;
+    border-radius: 999px;
+    font-weight: 700;
   }
-  .tab-special.active{opacity:1;}
 
-  .summary-strip{
-    display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:14px 0;
+  /* 채권변동요청 (파랑) */
+  .tab-change {
+    color: #1d4ed8;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
   }
-  .metric{
-    background:#fff; border:1px solid var(--border-color); border-radius:4px; padding:10px 14px;
+  .tab-change::before {
+    background: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59,130,246,0.18);
   }
-  .metric.clickable{cursor:pointer;}
-  .metric.clickable:hover{border-color:#c9c9c5;}
-  .metric.active{border-color:#eccf8f; background:#fffbef;}
-  .metric .lbl{font-size:11px; color:var(--text-mute); margin-bottom:4px;}
-  .metric .num{font-size:19px; font-weight:700;}
-  .metric .num.amber{color:var(--badge-amber-text);}
-  .metric .num.red{color:var(--badge-red-text);}
-  .metric .sub{font-size:10px; color:var(--text-mute); margin-top:3px;}
-  .scope-note{font-size:11px; color:var(--text-mute); margin:-6px 0 12px;}
+  .tab-change:hover {
+    background: #dbeafe;
+    border-color: #93c5fd;
+  }
+  .tab-change.active {
+    background: #3b82f6;
+    border-color: #3b82f6;
+    color: #fff;
+  }
+  .tab-change.active::before {
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+  }
+  .tab-change .count {
+    background: rgba(29,78,216,0.12);
+    color: #1e40af;
+  }
+  .tab-change.active .count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+  }
 
-  table{width:100%; border-collapse:collapse; background:#fff;}
-  thead th{
-    background:var(--header-blue); color:#fff; font-weight:600; font-size:12px;
-    padding:9px 8px; text-align:center; border-right:1px solid rgba(255,255,255,.15); white-space:nowrap;
+  /* 미배정 (주황) */
+  .tab-unassigned {
+    color: #b45309;
+    background: #fff7ed;
+    border: 1px solid #fed7aa;
   }
-  tbody td{
-    padding:9px 8px; text-align:center; font-size:12.5px; border-bottom:1px solid var(--border-color);
-    white-space:nowrap;
+  .tab-unassigned::before {
+    background: #f97316;
+    box-shadow: 0 0 0 3px rgba(249,115,22,0.18);
   }
-  tbody tr.data-row{cursor:pointer;}
-  tbody tr.data-row:hover{background:#f7fafd;}
-  tbody tr.data-row.selected{background:#eef5fd;}
-
-  .badge{display:inline-block; padding:3px 9px; border-radius:10px; font-size:11px; font-weight:600;}
-  .badge.amber{background:var(--badge-amber-bg); color:var(--badge-amber-text);}
-  .badge.gray{background:var(--badge-gray-bg); color:var(--badge-gray-text);}
-  .badge.green{background:var(--badge-green-bg); color:var(--badge-green-text);}
-  .badge.blue{background:var(--badge-blue-bg); color:var(--badge-blue-text);}
-  .badge.red{background:var(--badge-red-bg); color:var(--badge-red-text);}
-  .badge.purple{background:#efe6fb; color:#5b3a99;}
-
-  .lag-ok{color:var(--text-mid);}
-  .lag-warn{color:var(--badge-red-text); font-weight:600;}
-
-  .detail-row td{
-    background:#fbfcfe; text-align:left; padding:16px 24px; border-bottom:2px solid var(--border-color);
+  .tab-unassigned:hover {
+    background: #ffedd5;
+    border-color: #fdba74;
   }
-  .detail-grid{display:grid; grid-template-columns:repeat(5,1fr); gap:10px; margin-bottom:14px;}
-  .trig-card{
-    border:1px solid var(--border-color); border-radius:4px; padding:10px; background:#fff; font-size:11.5px;
+  .tab-unassigned.active {
+    background: #f97316;
+    border-color: #f97316;
+    color: #fff;
   }
-  .trig-card.hit{border-color:#eccf8f; background:#fffbef;}
-  .trig-card .code{color:var(--text-mute); font-size:10.5px; margin-bottom:3px;}
-  .trig-card .name{font-weight:600; margin-bottom:6px; line-height:1.4;}
-  .trig-card .val{font-size:12px;}
-  .trig-card .mark{float:right; font-weight:700;}
-  .trig-card.hit .mark{color:var(--badge-amber-text);}
-  .trig-card:not(.hit) .mark{color:var(--text-mute);}
-
-  .detail-foot{display:flex; justify-content:flex-end; align-items:center; border-top:1px dashed var(--border-color); padding-top:10px;}
-  .detail-btns{display:flex; gap:8px;}
-  .detail-btns .btn{padding:7px 12px; font-size:11.5px;}
-
-  .toast{
-    position:sticky; top:8px; z-index:5; margin:0 0 10px; background:#eaf7ee; color:#1b7a3d;
-    border:1px solid #bfe3c9; border-radius:4px; padding:9px 14px; font-size:12px; display:none;
+  .tab-unassigned.active::before {
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
   }
-  .pager{display:flex; justify-content:flex-end; align-items:center; gap:14px; padding:10px 4px; font-size:12px; color:var(--text-mute);}
+  .tab-unassigned .count {
+    background: rgba(180, 83, 9, 0.12);
+    color: #9a3412;
+  }
+  .tab-unassigned.active .count {
+    background: rgba(255,255,255,0.25);
+    color: #fff;
+  }
+
+  .toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    background: #fafbfc;
+    border-bottom: 1px solid #eaecef;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .toolbar-left, .toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .selected-info {
+    font-size: 13px;
+    color: #2563eb;
+    font-weight: 500;
+  }
+
+  button {
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    padding: 8px 14px;
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  button:hover:not(:disabled) {
+    background: #f3f4f6;
+    border-color: #9ca3af;
+  }
+  button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: #2563eb;
+    color: #fff;
+    border-color: #2563eb;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: #1d4ed8;
+    border-color: #1d4ed8;
+  }
+  .btn-primary:disabled {
+    background: #9ca3af;
+    border-color: #9ca3af;
+    color: #fff;
+  }
+  .btn-ghost {
+    background: transparent;
+    border-color: transparent;
+    color: #6b7280;
+  }
+  .btn-ghost:hover:not(:disabled) {
+    background: #f3f4f6;
+    color: #111;
+  }
+
+  select {
+    padding: 8px 28px 8px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 13px;
+    background: #fff;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+    background-size: 14px;
+    min-width: 160px;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  thead {
+    background: #f9fafb;
+  }
+  th {
+    text-align: left;
+    padding: 12px 16px;
+    font-weight: 600;
+    color: #4b5563;
+    font-size: 12px;
+    border-bottom: 1px solid #eaecef;
+    white-space: nowrap;
+  }
+  td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+  }
+  tbody tr {
+    transition: background 0.1s;
+  }
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+  tbody tr.selected {
+    background: #eff6ff;
+  }
+  tbody tr.selected:hover {
+    background: #dbeafe;
+  }
+
+  .checkbox-col {
+    width: 40px;
+    text-align: center;
+  }
+  .checkbox-col,
+  th.checkbox-col {
+    display: none;
+  }
+  body.assign-mode .checkbox-col,
+  body.assign-mode th.checkbox-col {
+    display: table-cell;
+  }
+  input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: #2563eb;
+  }
+
+  .assignee-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .assignee-name {
+    font-weight: 500;
+  }
+  .assignee-unassigned {
+    color: #9ca3af;
+    font-style: normal;
+  }
+  .assignee-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    background: #eff6ff;
+    color: #2563eb;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .badge-unassigned {
+    background: #f3f4f6;
+    color: #6b7280;
+  }
+  .history-icon {
+    cursor: pointer;
+    color: #9ca3af;
+    font-size: 12px;
+    user-select: none;
+    margin-left: 4px;
+  }
+  .history-icon:hover { color: #2563eb; }
+
+  .amount { text-align: right; font-variant-numeric: tabular-nums; font-weight: 500; }
+  .time-cell { color: #6b7280; font-variant-numeric: tabular-nums; font-size: 12px; }
+
+  .empty {
+    padding: 60px 24px;
+    text-align: center;
+    color: #9ca3af;
+    font-size: 14px;
+  }
+
+  /* History list */
+  .history-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+  }
+  .history-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #f9fafb;
+    color: #4b5563;
+    font-weight: 600;
+    font-size: 12px;
+    border-bottom: 1px solid #eaecef;
+    white-space: nowrap;
+  }
+  .history-table td {
+    padding: 10px;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 13px;
+    vertical-align: middle;
+  }
+  .history-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+  }
+  .status-assign     { background: #ecfdf5; color: #047857; }
+  .status-reassign   { background: #fef3c7; color: #92400e; }
+  .status-unassign   { background: #f3f4f6; color: #6b7280; }
+  .history-empty {
+    color: #9ca3af;
+    text-align: center;
+    padding: 28px 0;
+    font-size: 13px;
+  }
+
+  /* Modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.4);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 100;
+  }
+  .modal-backdrop.show { display: flex; }
+  .modal {
+    background: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 480px;
+    box-shadow: 0 20px 25px rgba(0,0,0,0.1);
+  }
+  .modal-header {
+    padding: 18px 20px;
+    border-bottom: 1px solid #eaecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .modal-header h3 { font-size: 15px; font-weight: 600; }
+  .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 0; }
+  .modal-body { padding: 20px; max-height: 400px; overflow-y: auto; }
+  .history-item {
+    padding: 10px 0;
+    border-bottom: 1px solid #f1f3f5;
+    display: flex;
+    justify-content: space-between;
+    font-size: 13px;
+  }
+  .history-item:last-child { border-bottom: none; }
+  .history-name { font-weight: 500; }
+  .history-action { color: #6b7280; font-size: 12px; }
+  .history-time { color: #9ca3af; font-size: 12px; font-variant-numeric: tabular-nums; }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 12px 20px;
+    border-radius: 6px;
+    font-size: 13px;
+    opacity: 0;
+    transition: all 0.25s;
+    pointer-events: none;
+    z-index: 200;
+  }
+  .toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 </style>
 </head>
 <body>
+  <div class="container">
+    <div class="header">
+      <h1>채권 담당자 배정 관리</h1>
+      <p>수탁사 관리자는 채권 리스트를 확인 후 실무 인력별로 채권을 배정할 수 있습니다.</p>
+    </div>
 
-<div class="proto-banner">PROTOTYPE · v1.3 (실제 데이터 아님, 논의용 목업) · 요약 카드가 곧 정렬/필터 버튼 · 구간(B-1/B-2)은 리스트 컬럼 표기로만 확인</div>
+    <div class="tabs">
+      <div class="tab-group tab-group-primary">
+        <div class="tab active" data-tab="all">전체 <span class="count">(<span id="cnt-all">0</span>)</span></div>
+        <div class="tab" data-tab="under30">30일 미만 <span class="count">(<span id="cnt-under30">0</span>)</span></div>
+        <div class="tab" data-tab="over30">30일 이상 <span class="count">(<span id="cnt-over30">0</span>)</span></div>
+        <div class="tab" data-tab="forbidden">추심 금지 <span class="count">(<span id="cnt-forbidden">0</span>)</span></div>
+        <div class="tab" data-tab="changeRequest">채권변동요청 <span class="count">(<span id="cnt-change">0</span>)</span></div>
+      </div>
+      <div class="tab-divider"></div>
+      <div class="tab-group">
+        <div class="tab-pill tab-unassigned" data-tab="unassigned">미배정 <span class="count" id="cnt-unassigned">0</span></div>
+      </div>
+    </div>
 
-<div class="topbar">
-  <div>☰&nbsp;&nbsp;연체/특수채권 관리</div>
-  <div class="right"><span>🔍 검색</span><span>메인</span><span>로그아웃</span></div>
-</div>
+    <div class="toolbar">
+      <div class="toolbar-left">
+        <span class="selected-info" id="selected-info" style="display:none;">0건 선택됨</span>
+      </div>
+      <div class="toolbar-right">
+        <select id="assignee-select" style="display:none;">
+          <option value="">담당자 선택</option>
+          <option value="__unassigned__">미배정</option>
+          <option value="김민수">김민수</option>
+          <option value="이지영">이지영</option>
+          <option value="박정훈">박정훈</option>
+          <option value="최서연">최서연</option>
+          <option value="장도현">장도현</option>
+        </select>
+        <button id="btn-cancel" class="btn-ghost" style="display:none;">취소</button>
+        <button id="btn-assign" class="btn-primary">담당자 배정</button>
+      </div>
+    </div>
 
-<div class="wrap">
+    <div style="overflow-x:auto;">
+      <table>
+        <thead>
+          <tr>
+            <th class="checkbox-col"><input type="checkbox" id="check-all"></th>
+            <th>No.</th>
+            <th>딜번호</th>
+            <th>대출액</th>
+            <th>연체 원금</th>
+            <th>연체일수</th>
+            <th>담당자</th>
+            <th>배정일</th>
+            <th>최근 업데이트 시간</th>
+          </tr>
+        </thead>
+        <tbody id="claim-tbody"></tbody>
+      </table>
+      <div class="empty" id="empty-state" style="display:none;">표시할 채권이 없습니다.</div>
+    </div>
+  </div>
+
+  <!-- History modal -->
+  <div class="modal-backdrop" id="history-modal">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="history-title">담당자 배정 이력</h3>
+        <button class="modal-close" id="modal-close">&times;</button>
+      </div>
+      <div class="modal-body" id="history-body"></div>
+    </div>
+  </div>
 
   <div class="toast" id="toast"></div>
 
-  <div id="filtercard-a" class="filtercard">
-    <div class="filter-card">
-      <div class="filter-fields">
-        <div class="field"><label>기준일시</label><div class="val">2026-07-22 14:30:33</div></div>
-        <div class="field"><label>ApplyUid</label><input placeholder=""></div>
-        <div class="field"><label>DealUid</label><input placeholder=""></div>
-        <div class="field"><label>성명</label><input placeholder=""></div>
-        <div class="field"><label>상품유형</label>
-          <select><option>전체</option><option selected>직장인 신용대출</option><option>주택 담보대출</option></select>
-        </div>
-      </div>
-      <div class="actions">
-        <div class="btn blue">조회하기</div>
-        <div class="btn blue-light">다운로드(전체)</div>
-      </div>
-    </div>
-  </div>
-
-  <div id="filtercard-b" class="filtercard" style="display:none">
-    <div class="filter-card">
-      <div class="filter-fields">
-        <div class="field"><label>기준일시</label><div class="val">2026-07-22 14:30:33</div></div>
-        <div class="field"><label>ApplyUid</label><input placeholder=""></div>
-        <div class="field"><label>DealUid</label><input placeholder=""></div>
-        <div class="field"><label>성명</label><input placeholder=""></div>
-      </div>
-      <div class="actions">
-        <div class="btn blue">조회하기</div>
-        <div class="btn blue-light">다운로드(전체)</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabs">
-    <div class="tab" onclick="switchTab('placeholder', this)">전체 (228)</div>
-    <div class="tab" onclick="switchTab('b', this)">일반연체 (30일미만) (71)</div>
-    <div class="tab" onclick="switchTab('placeholder', this)">일반연체 (30일이상) (34)</div>
-    <div class="tab" onclick="switchTab('placeholder', this)">개인회생 (121)</div>
-    <div class="tab" onclick="switchTab('placeholder', this)">개인파산/면책 (2)</div>
-    <div class="tab" onclick="switchTab('placeholder', this)">사망/상속 (0)</div>
-    <div class="tab-divider"></div>
-    <div class="tab-special active" onclick="switchTab('a', this)">사전감지 정상채권 (452)</div>
-  </div>
-
-  <div id="view-a" class="view">
-
-    <div class="summary-strip">
-      <div class="metric clickable" onclick="applyFilter('all')">
-        <div class="lbl">판정대상 정상채권 (NICE 매칭)</div>
-        <div class="num">452</div>
-        <div class="sub">내부 정상채권(dpd=0) 8,223건 중 NICE 데이터가 매칭되어 실제 트리거 판정이 가능한 건</div>
-      </div>
-      <div class="metric clickable" onclick="applyFilter('watch')"><div class="lbl">관찰등급채권</div><div class="num amber">31</div></div>
-      <div class="metric clickable" onclick="applyFilter('new')"><div class="lbl">최근 7일 신규 변동 채권</div><div class="num amber">9</div></div>
-    </div>
-    <div class="scope-note">※ 이 탭은 NICE 데이터가 매칭되어 실제 트리거 판정이 가능한 정상채권만을 대상으로 합니다. 기본 테이블은 <b>관찰등급만</b> 표시되도록 필터링되어 있습니다.</div>
-    <div class="scope-note">※ 배치 기준일 <b style="color:var(--btn-blue);">2026-07-15 (D-7)</b> · 전 건 공통(연체 미발생 상태 기준) · 신용정보 활용 근거: CB조회 동의 범위 내 사후관리 목적입니다.</div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>No.</th>
-          <th>본신청번호</th>
-          <th>딜번호</th>
-          <th>성명</th>
-          <th>상품유형</th>
-          <th>대출실행일</th>
-          <th>대출실행액(원)</th>
-          <th>다음 상환예정일</th>
-          <th>연체 회수</th>
-          <th>등급</th>
-          <th>충족 트리거</th>
-          <th>조치상태</th>
-        </tr>
-      </thead>
-      <tbody id="tbody"></tbody>
-    </table>
-
-    <div class="pager">Rows per page: 10 &nbsp;▾ &nbsp;&nbsp; 1-4 of 31 (관찰등급 기준, 판정대상 452건 중) &nbsp; ‹ › </div>
-
-  </div>
-
-  <div id="view-b" class="view" style="display:none">
-
-    <div class="summary-strip">
-      <div class="metric clickable" onclick="applyFilterB('all')">
-        <div class="lbl">대상 채권 (일반연체 30일미만)</div>
-        <div class="num">71</div>
-        <div class="sub">D+1~30 구간 전체, B-1/B-2 트리거 판정 결과 포함</div>
-      </div>
-      <div class="metric clickable" onclick="applyFilterB('special')"><div class="lbl">특수채권 전환 필요</div><div class="num red">6</div></div>
-      <div class="metric clickable" onclick="applyFilterB('high')"><div class="lbl">고위험(콜 상향·매각검토)</div><div class="num red">3</div></div>
-    </div>
-    <div class="scope-note">※ 구간(B-1/B-2)과 판정은 리스트 컬럼에 표기되며, 위 요약 카드 클릭으로 판정 기준 정렬(필터)이 가능합니다. <b>개인회생 신청(BE0000801)</b> 확인 시 구간과 무관하게 특수채권 전환이 최우선입니다.</div>
-    <div class="scope-note">※ 배치 기준일 <b style="color:var(--btn-blue);">2026-07-15 (D-7)</b> · 전 건 공통 · 신용정보 활용 근거: CB조회 동의 범위 내 사후관리 목적입니다.</div>
-
-    <table>
-      <thead>
-        <tr>
-          <th>No.</th>
-          <th>본신청번호</th>
-          <th>딜번호</th>
-          <th>성명</th>
-          <th>연체기산일</th>
-          <th>연체일수</th>
-          <th>연체시 원금잔액</th>
-          <th>연체금액합계</th>
-          <th>연체중인 회차수</th>
-          <th>기한이익상실일</th>
-          <th>구간</th>
-          <th>판정</th>
-          <th>조치상태</th>
-        </tr>
-      </thead>
-      <tbody id="tbodyB"></tbody>
-    </table>
-
-    <div class="pager" id="pagerB">Rows per page: 10 &nbsp;▾ &nbsp;&nbsp; 1-8 of 71 &nbsp; ‹ › </div>
-
-  </div>
-
-  <div id="view-placeholder" class="view" style="display:none">
-    <div style="background:#fff; border:1px solid var(--border-color); border-radius:4px; padding:48px 20px; text-align:center; color:var(--text-mute); font-size:13px;">
-      이 프로토타입에서는 해당 탭을 다루지 않습니다. 기존 화면 그대로 유지될 예정입니다.
-    </div>
-  </div>
-
-</div>
-
 <script>
-const triggers = [
-  {code:'LU0024107', name:'대부업권 최근 1주 신규 차입 총기관수', cond:'≥ 1'},
-  {code:'ZS0000184', name:'최근 1개월 NICE CB개설 건수', cond:'상위 10%'},
-  {code:'SC0301003', name:'CB평점 최근 3개월 연속 하향개월수', cond:'≥ 2'},
-  {code:'CL0000905', name:'신용카드 총 한도소진율(15일기준)', cond:'전월 대비 +20%p↑'},
-  {code:'CF0100115/116', name:'현금서비스·리볼빙 이용기관수(신규)', cond:'신규 발생'}
-];
+  // ===== Current user (배정 작업을 수행하는 관리자) =====
+  const CURRENT_USER = "김도윤";
 
-const rows = [
-  {no:1, apply:'31204815', deal:'14012', name:'김도윤', prod:'직장인 신용대출', date:'2025-09-02', amt:'12,000,000', due:'D-3', hist:0,
-   hits:[1,1,1,0,0], vals:['1건','상위6%','3개월','—','—'], action:'sms', isNew:true},
-  {no:2, apply:'31298402', deal:'14055', name:'이서연', prod:'직장인 신용대출', date:'2025-10-11', amt:'8,000,000', due:'D-1', hist:1,
-   hits:[1,0,0,0,1], vals:['2건','상위42%','0개월','+3%p','신규발생'], action:'sms', isNew:false},
-  {no:3, apply:'31301177', deal:'14098', name:'박민재', prod:'직장인 신용대출', date:'2025-08-20', amt:'20,000,000', due:'D-9', hist:0,
-   hits:[0,0,1,0,0], vals:['0건','상위55%','2개월','+5%p','—'], action:'none', grade:'normal', isNew:false},
-  {no:4, apply:'31355290', deal:'14140', name:'최지우', prod:'직장인 신용대출', date:'2025-11-05', amt:'15,000,000', due:'D-2', hist:2,
-   hits:[1,1,1,1,0], vals:['3건','상위3%','4개월','+27%p','—'], action:'sms', isNew:true},
-  {no:5, apply:'31402993', deal:'14183', name:'정하은', prod:'직장인 신용대출', date:'2025-07-30', amt:'5,000,000', due:'D-11', hist:0,
-   hits:[0,0,0,0,0], vals:['0건','상위70%','0개월','-2%p','—'], action:'none', grade:'normal', isNew:false},
-  {no:6, apply:'31410558', deal:'14201', name:'한승우', prod:'직장인 신용대출', date:'2025-09-18', amt:'9,000,000', due:'D-4', hist:1,
-   hits:[1,0,1,0,1], vals:['1건','상위33%','2개월','+1%p','신규발생'], action:'sms', isNew:false}
-];
+  // ===== Data =====
+  // 필드: id, dealNo, loanAmount, overduePrincipal, overdueDays,
+  //       collectionForbidden(추심 금지 여부), changeRequest(채권변동요청 여부),
+  //       assignee, assignedAt, updatedAt,
+  //       history[]: assignedBy(배정 작업 수행자) 포함
+  const claims = [
+    { id: 1,  dealNo: "84217", loanAmount: 15_000_000, overduePrincipal: 5_420_000,  overdueDays: 12, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 09:12:33", history: [] },
+    { id: 2,  dealNo: "29508", loanAmount:  8_000_000, overduePrincipal: 2_180_000,  overdueDays:  7, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-01 10:48:02", history: [] },
+    { id: 3,  dealNo: "61374", loanAmount: 25_000_000, overduePrincipal: 8_750_000,  overdueDays: 24, collectionForbidden: false, changeRequest: false, assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", history: [
+      { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 14:23:11", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 4,  dealNo: "47829", loanAmount:  5_000_000, overduePrincipal: 1_320_000,  overdueDays:  3, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-03 11:05:47", history: [] },
+    { id: 5,  dealNo: "93162", loanAmount: 40_000_000, overduePrincipal: 12_500_000, overdueDays: 45, collectionForbidden: false, changeRequest: false, assignee: "이지영", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", history: [
+      { assignee: "김민수", assignedAt: "2026-05-05", updatedAt: "2026-05-05 11:02:18", action: "배정",   assignedBy: "박상혁" },
+      { assignee: "이지영", previousAssignee: "김민수", assignedAt: "2026-05-07", updatedAt: "2026-05-07 09:15:42", action: "재배정", assignedBy: "김도윤" }
+    ]},
+    { id: 6,  dealNo: "15983", loanAmount: 12_000_000, overduePrincipal: 3_980_000,  overdueDays:  9, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-04 16:30:12", history: [] },
+    { id: 7,  dealNo: "70416", loanAmount: 20_000_000, overduePrincipal: 6_700_000,  overdueDays: 18, collectionForbidden: true,  changeRequest: false, assignee: "최서연", assignedAt: "2026-05-06", updatedAt: "2026-05-06 11:20:08", history: [
+      { assignee: "최서연", assignedAt: "2026-05-06", updatedAt: "2026-05-06 11:20:08", action: "배정", assignedBy: "박상혁" }
+    ]},
+    { id: 8,  dealNo: "38275", loanAmount: 13_500_000, overduePrincipal: 4_150_000,  overdueDays: 15, collectionForbidden: false, changeRequest: false, assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", history: [
+      { assignee: "박정훈", assignedAt: "2026-05-08", updatedAt: "2026-05-08 16:48:30", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 9,  dealNo: "56091", loanAmount: 30_000_000, overduePrincipal: 9_300_000,  overdueDays: 33, collectionForbidden: false, changeRequest: false, assignee: "장도현", assignedAt: "2026-05-09", updatedAt: "2026-05-09 10:05:14", history: [
+      { assignee: "장도현", assignedAt: "2026-05-09", updatedAt: "2026-05-09 10:05:14", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 10, dealNo: "82647", loanAmount:  9_500_000, overduePrincipal: 2_640_000,  overdueDays:  5, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-08 17:01:55", history: [] },
+    { id: 11, dealNo: "53921", loanAmount: 18_000_000, overduePrincipal: 5_960_000,  overdueDays: 52, collectionForbidden: false, changeRequest: false, assignee: null,    assignedAt: null,         updatedAt: "2026-05-09 14:22:51", history: [] },
+    { id: 12, dealNo: "67148", loanAmount: 22_500_000, overduePrincipal: 7_320_000,  overdueDays: 41, collectionForbidden: true,  changeRequest: false, assignee: "이지영", assignedAt: "2026-05-10", updatedAt: "2026-05-10 09:30:00", history: [
+      { assignee: "이지영", assignedAt: "2026-05-10", updatedAt: "2026-05-10 09:30:00", action: "배정", assignedBy: "박상혁" }
+    ]},
+    { id: 13, dealNo: "74205", loanAmount: 16_800_000, overduePrincipal: 4_870_000,  overdueDays: 21, collectionForbidden: false, changeRequest: true,  assignee: "김민수", assignedAt: "2026-05-09", updatedAt: "2026-05-11 13:14:25", history: [
+      { assignee: "김민수", assignedAt: "2026-05-09", updatedAt: "2026-05-09 15:00:00", action: "배정", assignedBy: "김도윤" }
+    ]},
+    { id: 14, dealNo: "41936", loanAmount: 11_200_000, overduePrincipal: 3_410_000,  overdueDays: 37, collectionForbidden: false, changeRequest: true,  assignee: "박정훈", assignedAt: "2026-05-10", updatedAt: "2026-05-11 10:42:18", history: [
+      { assignee: "박정훈", assignedAt: "2026-05-10", updatedAt: "2026-05-10 14:18:00", action: "배정", assignedBy: "박상혁" }
+    ]},
+  ];
 
-const actionBadge = {
-  sms:'<span class="badge green">SMS 발송완료</span>',
-  none:'<span class="badge gray">미조치</span>'
-};
+  // ===== State =====
+  let currentTab = "all";
+  let assignMode = false;
+  let selectedIds = new Set();
 
-function gradeInfo(r){
-  const hitCount = r.hits.reduce((a,b)=>a+b,0);
-  const grade = r.grade || (hitCount>=2 ? 'watch' : 'normal');
-  return {hitCount, grade};
-}
+  // ===== Helpers =====
+  const $ = (sel) => document.querySelector(sel);
+  const fmtMoney = (n) => n.toLocaleString("ko-KR") + "원";
+  const pad = (x, n = 2) => String(x).padStart(n, "0");
+  const formatDate = (d = new Date()) =>
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  const formatTimestamp = (d = new Date()) =>
+    `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+  // 분류 기준 (배정 건은 채권변동요청 > 추심 금지 > 30일 이상 > 30일 미만 순으로 우선 분류)
+  //  - 미배정(unassigned): 담당자 없음
+  //  - 전체(all): 모든 항목 (배정 + 미배정)
+  const isAssigned        = (c) => !!c.assignee;
+  const isUnassigned      = (c) => !c.assignee;
+  const isChangeRequest   = (c) => isAssigned(c) && c.changeRequest;
+  const isForbidden       = (c) => isAssigned(c) && !c.changeRequest && c.collectionForbidden;
+  const isOver30Assigned  = (c) => isAssigned(c) && !c.changeRequest && !c.collectionForbidden && c.overdueDays >= 30;
+  const isUnder30Assigned = (c) => isAssigned(c) && !c.changeRequest && !c.collectionForbidden && c.overdueDays < 30;
 
-function render(){
-  const tbody = document.getElementById('tbody');
-  tbody.innerHTML = '';
-  rows.forEach(r=>{
-    const {hitCount, grade} = gradeInfo(r);
-    const gradeBadge = grade==='watch'
-      ? '<span class="badge amber">관찰</span>'
-      : '<span class="badge gray">일반</span>';
+  const filteredClaims = () => {
+    if (currentTab === "unassigned")    return claims.filter(isUnassigned);
+    if (currentTab === "under30")       return claims.filter(isUnder30Assigned);
+    if (currentTab === "over30")        return claims.filter(isOver30Assigned);
+    if (currentTab === "forbidden")     return claims.filter(isForbidden);
+    if (currentTab === "changeRequest") return claims.filter(isChangeRequest);
+    return claims; // all
+  };
+  const showToast = (msg) => {
+    const t = $("#toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.remove("show"), 2200);
+  };
 
-    const tr = document.createElement('tr');
-    tr.className = 'data-row';
-    tr.dataset.grade = grade;
-    tr.dataset.new = r.isNew ? '1' : '0';
-    tr.innerHTML = `
-      <td>${r.no}</td>
-      <td style="color:#2166c9;">${r.apply}</td>
-      <td style="color:#2166c9;">${r.deal}</td>
-      <td>${r.name}</td>
-      <td>${r.prod}</td>
-      <td>${r.date}</td>
-      <td>${r.amt}</td>
-      <td>${r.due}</td>
-      <td>${r.hist}</td>
-      <td>${gradeBadge}</td>
-      <td><span class="badge ${hitCount>=2?'red':'gray'}">${hitCount}/5</span></td>
-      <td>${actionBadge[r.action]}</td>
-    `;
-    tr.addEventListener('click', ()=>toggleDetail(tr, r));
-    tbody.appendChild(tr);
-  });
-}
+  // ===== Render =====
+  function renderCounts() {
+    const under30   = claims.filter(isUnder30Assigned).length;
+    const over30    = claims.filter(isOver30Assigned).length;
+    const forbidden = claims.filter(isForbidden).length;
+    const change    = claims.filter(isChangeRequest).length;
+    const assigned  = under30 + over30 + change + forbidden;  // 배정 건 총계
+    const unassigned = claims.filter(isUnassigned).length;
+    const all       = assigned + unassigned;                  // 전체 총계
 
-function toggleDetail(tr, r){
-  const scope = document.getElementById('view-a');
-  const existing = tr.nextElementSibling;
-  scope.querySelectorAll('.data-row').forEach(x=>x.classList.remove('selected'));
-  scope.querySelectorAll('.detail-row').forEach(x=>x.remove());
-  if(existing && existing.classList.contains('detail-row-marker')) return;
+    $("#cnt-all").textContent        = all;
+    $("#cnt-under30").textContent    = under30;
+    $("#cnt-over30").textContent     = over30;
+    $("#cnt-forbidden").textContent  = forbidden;
+    $("#cnt-change").textContent     = change;
+    $("#cnt-unassigned").textContent = unassigned;
+  }
 
-  tr.classList.add('selected');
-  const detailTr = document.createElement('tr');
-  detailTr.className = 'detail-row detail-row-marker';
-  const td = document.createElement('td');
-  td.colSpan = 12;
+  function renderTable() {
+    const tbody = $("#claim-tbody");
+    const list = filteredClaims();
+    tbody.innerHTML = "";
 
-  let cardsHtml = '';
-  triggers.forEach((t,i)=>{
-    const hit = r.hits[i]===1;
-    cardsHtml += `
-      <div class="trig-card ${hit?'hit':''}">
-        <div class="code">${t.code}</div>
-        <div class="name">${t.name}<span class="mark">${hit?'✓':'―'}</span></div>
-        <div class="val">${t.cond} → 현재 ${r.vals[i]}</div>
-      </div>`;
-  });
+    if (list.length === 0) {
+      $("#empty-state").style.display = "block";
+    } else {
+      $("#empty-state").style.display = "none";
+    }
 
-  td.innerHTML = `
-    <div class="detail-grid">${cardsHtml}</div>
-    <div class="detail-foot">
-      <div class="detail-btns">
-        <div class="btn green" onclick="event.stopPropagation(); doAction('${r.name}','SMS 리마인드 발송')">상환일 D-3 리마인드 SMS 발송</div>
-      </div>
-    </div>
-  `;
-  detailTr.appendChild(td);
-  tr.parentNode.insertBefore(detailTr, tr.nextSibling);
-}
+    list.forEach((c, idx) => {
+      const idStr = String(c.id);
+      const tr = document.createElement("tr");
+      tr.dataset.id = idStr;
+      if (selectedIds.has(idStr)) tr.classList.add("selected");
 
-function doAction(name, action){
-  const toast = document.getElementById('toast');
-  toast.style.display = 'block';
-  toast.textContent = `${name} 고객 — "${action}" 처리되었습니다. (prototype 동작 시뮬레이션)`;
-  setTimeout(()=>{ toast.style.display='none'; }, 3000);
-}
+      const assigneeCell = c.assignee
+        ? `<span class="assignee-badge">${c.assignee}</span>`
+        : `<span class="assignee-badge badge-unassigned">미배정</span>`;
 
-function applyFilter(mode){
-  const scope = document.getElementById('view-a');
-  scope.querySelectorAll('.detail-row').forEach(x=>x.remove());
-  scope.querySelectorAll('.data-row').forEach(tr=>{
-    let show;
-    if(mode==='all') show = true;
-    else if(mode==='watch') show = tr.dataset.grade==='watch';
-    else if(mode==='normal') show = tr.dataset.grade==='normal';
-    else if(mode==='new') show = tr.dataset.new==='1';
-    tr.style.display = show ? '' : 'none';
-  });
-  syncControls(mode);
-}
+      const historyBtn = c.history.length > 0
+        ? `<span class="history-icon" data-history="${idStr}" title="이력 보기">📋</span>`
+        : "";
 
-function syncControls(mode){
-  const metrics = document.getElementById('view-a').querySelectorAll('.metric');
-  const metricIndex = {all:0, watch:1, new:2}[mode];
-  metrics.forEach((m,i)=>m.classList.toggle('active', i===metricIndex));
-}
-
-/* ===================== 탭 전환 ===================== */
-function switchTab(view, el){
-  document.querySelectorAll('.tab, .tab-special').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
-  document.getElementById('view-' + view).style.display = '';
-  document.querySelectorAll('.filtercard').forEach(f=>f.style.display='none');
-  const fc = document.getElementById('filtercard-' + view);
-  if(fc) fc.style.display = '';
-}
-
-/* ===================== 세그먼트 B: 단기연체(D+1~30) 장기화 방지 ===================== */
-const B1_TRIGGERS = [
-  {code:'P11021100', name:'최근3개월내 30일이상경험 연체 총 건수', cond:'≥ 1'},
-  {code:'LU0324801', name:'대부업권 미상환 대출건 최근3개월 신용대출 발생여부', cond:'= 1'},
-  {code:'BU0624001', name:'전은연 채무불이행 대부업권 최근6개월내 경험 총 건수', cond:'≥ 1'}
-];
-const B2_INDICATORS = [
-  {code:'LHC000004', name:'최근 6개월간 발생 대출건 상환율(타사)', cond:'≥ 70%'},
-  {code:'IE0300005', name:'NICE 추정연소득금액 (백분위)', cond:'상위 50% 이상'},
-  {code:'LC0000038', name:'전은연 미상환 신용대출 총건수 (상위%)', cond:'상위 20% 이내'},
-  {code:'ZS0000203', name:'부동산경매정보 총건수', cond:'≥ 1'}
-];
-
-const rowsB = [
-  {no:1, apply:'19745002', deal:'12867', name:'정소민', odStart:'2026-07-16', dpd:6, bal:'8,498,069', total:'230,755', installments:1, eodDate:'-', seg:'B1',
-   p3m30:1, lu0324801:0, bu0624001:0, be:false},
-  {no:2, apply:'20583855', deal:'13004', name:'오지훈', odStart:'2026-07-10', dpd:12, bal:'12,395,557', total:'2,897,811', installments:1, eodDate:'-', seg:'B1',
-   p3m30:0, lu0324801:1, bu0624001:1, be:false},
-  {no:3, apply:'21358278', deal:'13084', name:'유하늘', odStart:'2026-07-19', dpd:3, bal:'3,527,551', total:'96,518', installments:1, eodDate:'-', seg:'B1',
-   p3m30:0, lu0324801:0, bu0624001:0, be:false},
-  {no:4, apply:'24934423', deal:'13365', name:'배수진', odStart:'2026-07-08', dpd:14, bal:'25,124,445', total:'684,510', installments:1, eodDate:'-', seg:'B1',
-   p3m30:0, lu0324801:0, bu0624001:0, be:true},
-  {no:5, apply:'25019528', deal:'13376', name:'최민혁', odStart:'2026-06-26', dpd:18, bal:'30,566,212', total:'2,411,411', installments:2, eodDate:'-', seg:'B2',
-   lhc:82, ie:65, lcPct:45, zs:0, be:false},
-  {no:6, apply:'26826992', deal:'13646', name:'정다인', odStart:'2026-06-19', dpd:25, bal:'26,447,576', total:'737,809', installments:2, eodDate:'-', seg:'B2',
-   lhc:20, ie:30, lcPct:12, zs:1, be:false},
-  {no:7, apply:'28492310', deal:'13811', name:'한지원', odStart:'2026-06-15', dpd:29, bal:'18,066,251', total:'466,965', installments:2, eodDate:'-', seg:'B2',
-   lhc:40, ie:20, lcPct:35, zs:0, be:true},
-  {no:8, apply:'29662023', deal:'13903', name:'서예은', odStart:'2026-06-21', dpd:20, bal:'14,728,145', total:'814,190', installments:2, eodDate:'-', seg:'B2',
-   lhc:45, ie:40, lcPct:60, zs:0, be:false}
-];
-
-function classifyB1(r){
-  if(r.be) return 'special';
-  const hits = [r.p3m30>=1, r.lu0324801===1, r.bu0624001>=1].filter(Boolean).length;
-  return hits>=1 ? 'high' : 'normal';
-}
-function classifyB2(r){
-  if(r.be) return 'special';
-  if(r.lhc>=70 && r.ie>=50) return 'recoverable';
-  if(r.lcPct<=20 && r.zs>=1) return 'high';
-  return 'normal';
-}
-function classifyB(r){ return r.seg==='B1' ? classifyB1(r) : classifyB2(r); }
-
-const VERDICT_LABEL = {
-  special: {text:'특수채권 전환', cls:'red'},
-  high: {text:'고위험', cls:'red'},
-  recoverable: {text:'회복가능', cls:'green'},
-  normal: {text:'일반', cls:'gray'}
-};
-
-const ACTION_LABEL_B = {
-  special: {text:'특수채권 담당자 배정', cls:'gray'},
-  B1_high: {text:'콜 우선순위 상향', cls:'amber'},
-  B1_normal: {text:'표준 안내 유지', cls:'gray'},
-  B2_recoverable: {text:'분할상환 협의 배정', cls:'blue'},
-  B2_high: {text:'EOD 진행·매각검토', cls:'red'},
-  B2_normal: {text:'표준 모니터링', cls:'gray'}
-};
-
-function actionBadgeB(r, verdict){
-  const key = verdict==='special' ? 'special' : (r.seg + '_' + verdict);
-  const a = ACTION_LABEL_B[key] || {text:'-', cls:'gray'};
-  return `<span class="badge ${a.cls}">${a.text}</span>`;
-}
-
-function renderB(){
-  const tbody = document.getElementById('tbodyB');
-  tbody.innerHTML = '';
-  rowsB.forEach(r=>{
-    const verdict = classifyB(r);
-    const v = VERDICT_LABEL[verdict];
-    const tr = document.createElement('tr');
-    tr.className = 'data-row';
-    tr.dataset.seg = r.seg;
-    tr.dataset.verdict = verdict;
-    tr.innerHTML = `
-      <td>${r.no}</td>
-      <td style="color:#2166c9;">${r.apply}</td>
-      <td style="color:#2166c9;">${r.deal}</td>
-      <td>${r.name}</td>
-      <td>${r.odStart}</td>
-      <td>${r.dpd}</td>
-      <td>${r.bal}</td>
-      <td>${r.total}</td>
-      <td>${r.installments}</td>
-      <td>${r.eodDate}</td>
-      <td><span class="badge ${r.seg==='B1' ? 'blue' : 'purple'}">${r.seg}</span></td>
-      <td><span class="badge ${v.cls}">${v.text}</span></td>
-      <td>${actionBadgeB(r, verdict)}</td>
-    `;
-    tr.addEventListener('click', ()=>toggleDetailB(tr, r, verdict));
-    tbody.appendChild(tr);
-  });
-}
-
-function toggleDetailB(tr, r, verdict){
-  const scope = document.getElementById('view-b');
-  const existing = tr.nextElementSibling;
-  scope.querySelectorAll('.data-row').forEach(x=>x.classList.remove('selected'));
-  scope.querySelectorAll('.detail-row').forEach(x=>x.remove());
-  if(existing && existing.classList.contains('detail-row-marker')) return;
-
-  tr.classList.add('selected');
-  const detailTr = document.createElement('tr');
-  detailTr.className = 'detail-row detail-row-marker';
-  const td = document.createElement('td');
-  td.colSpan = 13;
-
-  let cardsHtml = '';
-  if(r.seg==='B1'){
-    const hitVals = [r.p3m30 + '건', r.lu0324801===1?'발생':'미발생', r.bu0624001 + '건'];
-    const hitFlags = [r.p3m30>=1, r.lu0324801===1, r.bu0624001>=1];
-    B1_TRIGGERS.forEach((t,i)=>{
-      cardsHtml += `
-        <div class="trig-card ${hitFlags[i]?'hit':''}">
-          <div class="code">${t.code}</div>
-          <div class="name">${t.name}<span class="mark">${hitFlags[i]?'✓':'―'}</span></div>
-          <div class="val">${t.cond} → 현재 ${hitVals[i]}</div>
-        </div>`;
+      tr.innerHTML = `
+        <td class="checkbox-col"><input type="checkbox" data-id="${idStr}" ${selectedIds.has(idStr) ? "checked" : ""}></td>
+        <td>${idx + 1}</td>
+        <td><strong>${c.dealNo}</strong></td>
+        <td class="amount">${fmtMoney(c.loanAmount)}</td>
+        <td class="amount">${fmtMoney(c.overduePrincipal)}</td>
+        <td class="amount">${c.overdueDays}일</td>
+        <td><div class="assignee-cell">${assigneeCell}${historyBtn}</div></td>
+        <td class="time-cell">${c.assignedAt || "-"}</td>
+        <td class="time-cell">${c.updatedAt || "-"}</td>
+      `;
+      tbody.appendChild(tr);
     });
-  } else {
-    const vals = [r.lhc + '%', '상위 ' + (100-r.ie) + '%', '상위 ' + r.lcPct + '%', r.zs + '건'];
-    const flags = [r.lhc>=70, r.ie>=50, r.lcPct<=20, r.zs>=1];
-    B2_INDICATORS.forEach((t,i)=>{
-      cardsHtml += `
-        <div class="trig-card ${flags[i]?'hit':''}">
-          <div class="code">${t.code}</div>
-          <div class="name">${t.name}<span class="mark">${flags[i]?'✓':'―'}</span></div>
-          <div class="val">${t.cond} → 현재 ${vals[i]}</div>
-        </div>`;
+
+    // Row click toggles checkbox in assign mode
+    tbody.querySelectorAll("tr").forEach(tr => {
+      tr.addEventListener("click", (e) => {
+        if (!assignMode) return;
+        if (e.target.classList.contains("history-icon")) return;
+        const id = tr.dataset.id;
+        const cb = tr.querySelector("input[type=checkbox]");
+        if (e.target.tagName !== "INPUT") cb.checked = !cb.checked;
+        if (cb.checked) selectedIds.add(id);
+        else selectedIds.delete(id);
+        tr.classList.toggle("selected", cb.checked);
+        updateSelectedInfo();
+        updateAssignButtonState();
+      });
+    });
+
+    // History icon click
+    tbody.querySelectorAll(".history-icon").forEach(icon => {
+      icon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        openHistory(icon.dataset.history);
+      });
     });
   }
-  if(r.be){
-    cardsHtml += `
-      <div class="trig-card hit">
-        <div class="code">BE0000801</div>
-        <div class="name">개인회생신청정보 미해제 여부<span class="mark">✓</span></div>
-        <div class="val">= 1 → 추심 트랙 즉시 중단, 특수채권 담당자 배정 필요</div>
-      </div>`;
+
+  function updateSelectedInfo() {
+    const info = $("#selected-info");
+    if (assignMode) {
+      info.style.display = "inline";
+      info.textContent = `${selectedIds.size}건 선택됨`;
+    } else {
+      info.style.display = "none";
+    }
   }
 
-  let actionButtons = '';
-  if(verdict==='special'){
-    actionButtons = `<div class="btn red" onclick="event.stopPropagation(); doAction('${r.name}','특수채권 담당자 배정(추심 중단)')">특수채권 담당자 배정</div>`;
-  } else if(r.seg==='B1' && verdict==='high'){
-    actionButtons = `<div class="btn amber" onclick="event.stopPropagation(); doAction('${r.name}','콜 우선순위 상향')">콜 우선순위 상향</div>`;
-  } else if(r.seg==='B2' && verdict==='recoverable'){
-    actionButtons = `<div class="btn blue" onclick="event.stopPropagation(); doAction('${r.name}','분할상환 협의 콜 배정')">분할상환 협의 콜 배정</div>
-      <div class="btn gray" onclick="event.stopPropagation(); doAction('${r.name}','EOD 유예 검토')">EOD 유예 검토</div>`;
-  } else if(r.seg==='B2' && verdict==='high'){
-    actionButtons = `<div class="btn red" onclick="event.stopPropagation(); doAction('${r.name}','EOD 정상 진행 및 매각 우선순위 검토')">EOD 진행·매각검토 처리</div>`;
-  } else {
-    actionButtons = `<div class="btn gray" onclick="event.stopPropagation(); doAction('${r.name}','표준 안내 유지')">표준 안내 유지</div>`;
+  function updateAssignButtonState() {
+    const btn = $("#btn-assign");
+    const sel = $("#assignee-select");
+    if (!assignMode) {
+      btn.disabled = false;
+      return;
+    }
+    // 배정 완료 모드: 실무자 선택 + 1개 이상 체크되어야 활성화
+    btn.disabled = !sel.value || selectedIds.size === 0;
   }
 
-  td.innerHTML = `
-    <div class="detail-grid" style="grid-template-columns:repeat(${r.be ? (r.seg==='B1'?4:5) : (r.seg==='B1'?3:4)},1fr);">${cardsHtml}</div>
-    <div class="detail-foot">
-      <div class="detail-btns">${actionButtons}</div>
-    </div>
-  `;
-  detailTr.appendChild(td);
-  tr.parentNode.insertBefore(detailTr, tr.nextSibling);
-}
+  // ===== Assign mode =====
+  function enterAssignMode() {
+    assignMode = true;
+    document.body.classList.add("assign-mode");
+    $("#assignee-select").style.display = "inline-block";
+    $("#btn-cancel").style.display = "inline-block";
+    $("#btn-assign").textContent = "배정 완료";
+    $("#btn-assign").disabled = true;
+    selectedIds.clear();
+    updateSelectedInfo();
+    renderTable();
+  }
 
-function applyFilterB(mode){
-  const scope = document.getElementById('view-b');
-  scope.dataset.verdictMode = mode || scope.dataset.verdictMode || 'all';
-  const verdictMode = scope.dataset.verdictMode;
-  scope.querySelectorAll('.detail-row').forEach(x=>x.remove());
-  scope.querySelectorAll('.data-row').forEach(tr=>{
-    tr.style.display = (verdictMode==='all' || tr.dataset.verdict===verdictMode) ? '' : 'none';
+  function exitAssignMode() {
+    assignMode = false;
+    document.body.classList.remove("assign-mode");
+    $("#assignee-select").style.display = "none";
+    $("#assignee-select").value = "";
+    $("#btn-cancel").style.display = "none";
+    $("#btn-assign").textContent = "담당자 배정";
+    $("#btn-assign").disabled = false;
+    $("#check-all").checked = false;
+    selectedIds.clear();
+    updateSelectedInfo();
+    renderTable();
+  }
+
+  function completeAssign() {
+    const selectVal = $("#assignee-select").value;
+    if (!selectVal || selectedIds.size === 0) return;
+
+    const isUnassign = selectVal === "__unassigned__";
+    const newAssignee = isUnassign ? null : selectVal;
+    const nowDate = formatDate(new Date());
+    const nowTimestamp = formatTimestamp(new Date());
+
+    let count = 0;
+    selectedIds.forEach(id => {
+      const c = claims.find(x => String(x.id) === String(id));
+      if (!c) return;
+      const prev = c.assignee;
+      const action = isUnassign
+        ? "미배정 전환"
+        : (prev ? "재배정" : "배정");
+
+      // history: 이전 담당자가 있을 경우 이전 담당자명/배정일 보존, 작업 수행자(배정자) 기록
+      c.history.push({
+        assignee: isUnassign ? "미배정" : newAssignee,
+        previousAssignee: prev || null,
+        assignedAt: isUnassign ? null : nowDate,
+        updatedAt: nowTimestamp,
+        action,
+        assignedBy: CURRENT_USER,
+      });
+      c.assignee = newAssignee;
+      c.assignedAt = isUnassign ? null : nowDate;
+      c.updatedAt = nowTimestamp;
+      count++;
+    });
+
+    showToast(`${count}건 ${isUnassign ? "미배정 전환" : "배정 완료"}`);
+    exitAssignMode();
+    renderCounts();
+  }
+
+  // ===== History modal =====
+  function openHistory(id) {
+    const c = claims.find(x => String(x.id) === String(id));
+    if (!c) return;
+
+    // 팝업 타이틀: 담당자 배정 이력 (#딜번호)
+    $("#history-title").textContent = `담당자 배정 이력 (#${c.dealNo})`;
+
+    const body = $("#history-body");
+    if (c.history.length === 0) {
+      body.innerHTML = `<div class="history-empty">이력이 없습니다.</div>`;
+    } else {
+      const statusClass = (action) => {
+        if (action === "배정")       return "status-assign";
+        if (action === "재배정")     return "status-reassign";
+        if (action === "미배정 전환") return "status-unassign";
+        return "";
+      };
+      // 최신순 정렬
+      const rows = [...c.history].reverse().map(h => `
+        <tr>
+          <td><span class="history-status ${statusClass(h.action)}">${h.action}</span></td>
+          <td>${h.assignee || "미배정"}</td>
+          <td class="time-cell">${h.updatedAt || "-"}</td>
+          <td>${h.assignedBy || "-"}</td>
+        </tr>
+      `).join("");
+
+      body.innerHTML = `
+        <table class="history-table">
+          <thead>
+            <tr>
+              <th>상태</th>
+              <th>담당자</th>
+              <th>배정 시간</th>
+              <th>배정자</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+    }
+    $("#history-modal").classList.add("show");
+  }
+
+  // ===== Event listeners =====
+  // 두 그룹(.tab / .tab-pill) 모두 클릭 가능
+  const allTabEls = document.querySelectorAll(".tab, .tab-pill");
+  allTabEls.forEach(tab => {
+    tab.addEventListener("click", () => {
+      if (assignMode) exitAssignMode();
+      allTabEls.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      currentTab = tab.dataset.tab;
+      renderTable();
+    });
   });
-  const metrics = scope.querySelectorAll('.metric');
-  const metricIndex = {all:0, special:1, high:2}[verdictMode];
-  metrics.forEach((m,i)=>m.classList.toggle('active', i===metricIndex));
-}
 
-render();
-applyFilter('watch');
-renderB();
-applyFilterB('all');
+  $("#btn-assign").addEventListener("click", () => {
+    if (!assignMode) enterAssignMode();
+    else completeAssign();
+  });
+
+  $("#btn-cancel").addEventListener("click", exitAssignMode);
+
+  $("#assignee-select").addEventListener("change", updateAssignButtonState);
+
+  $("#check-all").addEventListener("change", (e) => {
+    const checked = e.target.checked;
+    filteredClaims().forEach(c => {
+      const idStr = String(c.id);
+      if (checked) selectedIds.add(idStr);
+      else selectedIds.delete(idStr);
+    });
+    renderTable();
+    updateSelectedInfo();
+    updateAssignButtonState();
+  });
+
+  $("#modal-close").addEventListener("click", () => $("#history-modal").classList.remove("show"));
+  $("#history-modal").addEventListener("click", (e) => {
+    if (e.target.id === "history-modal") $("#history-modal").classList.remove("show");
+  });
+
+  // Init
+  renderCounts();
+  renderTable();
 </script>
-
 </body>
 </html>
