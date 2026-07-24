@@ -120,9 +120,6 @@
   .badge.red{background:var(--badge-red-bg); color:var(--badge-red-text);}
   .badge.purple{background:#efe6fb; color:#5b3a99;}
 
-  .lag-ok{color:var(--text-mid);}
-  .lag-warn{color:var(--badge-red-text); font-weight:600;}
-
   .detail-row td{
     background:#fbfcfe; text-align:left; padding:16px 24px; border-bottom:2px solid var(--border-color);
   }
@@ -265,12 +262,16 @@
           <th>본신청번호</th>
           <th>딜번호</th>
           <th>성명</th>
+          <th>대출실행일</th>
+          <th>대출실행액</th>
           <th>연체기산일</th>
           <th>연체일수</th>
-          <th>연체시 원금잔액</th>
+          <th>연체시원금잔액</th>
           <th>연체금액합계</th>
-          <th>연체중인 회차수</th>
+          <th>연체회차수</th>
           <th>기한이익상실일</th>
+          <th>특수채권분류</th>
+          <th>특수채권상태</th>
           <th>구간</th>
           <th>판정</th>
           <th>조치상태</th>
@@ -446,21 +447,21 @@ const B2_INDICATORS = [
 ];
 
 const rowsB = [
-  {no:1, apply:'19745002', deal:'12867', name:'정소민', odStart:'2026-07-16', dpd:6, bal:'8,498,069', total:'230,755', installments:1, eodDate:'-', seg:'B1',
+  {no:1, apply:'19745002', deal:'12867', name:'정소민', loanDate:'2025-08-10', loanAmt:'9,000,000', odStart:'2026-07-16', dpd:6, bal:'8,498,069', total:'230,755', installments:1, eodDate:'-', seg:'B1',
    p3m30:1, lu0324801:0, bu0624001:0, be:false},
-  {no:2, apply:'20583855', deal:'13004', name:'오지훈', odStart:'2026-07-10', dpd:12, bal:'12,395,557', total:'2,897,811', installments:1, eodDate:'-', seg:'B1',
+  {no:2, apply:'20583855', deal:'13004', name:'오지훈', loanDate:'2025-06-22', loanAmt:'14,500,000', odStart:'2026-07-10', dpd:12, bal:'12,395,557', total:'2,897,811', installments:1, eodDate:'-', seg:'B1',
    p3m30:0, lu0324801:1, bu0624001:1, be:false},
-  {no:3, apply:'21358278', deal:'13084', name:'유하늘', odStart:'2026-07-19', dpd:3, bal:'3,527,551', total:'96,518', installments:1, eodDate:'-', seg:'B1',
+  {no:3, apply:'21358278', deal:'13084', name:'유하늘', loanDate:'2025-10-05', loanAmt:'5,000,000', odStart:'2026-07-19', dpd:3, bal:'3,527,551', total:'96,518', installments:1, eodDate:'-', seg:'B1',
    p3m30:0, lu0324801:0, bu0624001:0, be:false},
-  {no:4, apply:'24934423', deal:'13365', name:'배수진', odStart:'2026-07-08', dpd:14, bal:'25,124,445', total:'684,510', installments:1, eodDate:'-', seg:'B1',
-   p3m30:0, lu0324801:0, bu0624001:0, be:true},
-  {no:5, apply:'25019528', deal:'13376', name:'최민혁', odStart:'2026-06-26', dpd:18, bal:'30,566,212', total:'2,411,411', installments:2, eodDate:'-', seg:'B2',
+  {no:4, apply:'24934423', deal:'13365', name:'배수진', loanDate:'2025-05-14', loanAmt:'27,000,000', odStart:'2026-07-08', dpd:14, bal:'25,124,445', total:'684,510', installments:1, eodDate:'-', seg:'B1',
+   p3m30:0, lu0324801:0, bu0624001:0, be:true, specialType:'개인회생', specialStatus:'접수'},
+  {no:5, apply:'25019528', deal:'13376', name:'최민혁', loanDate:'2025-01-20', loanAmt:'32,000,000', odStart:'2026-06-26', dpd:18, bal:'30,566,212', total:'2,411,411', installments:2, eodDate:'-', seg:'B2',
    lhc:82, ie:65, lcPct:45, zs:0, be:false},
-  {no:6, apply:'26826992', deal:'13646', name:'정다인', odStart:'2026-06-19', dpd:25, bal:'26,447,576', total:'737,809', installments:2, eodDate:'-', seg:'B2',
+  {no:6, apply:'26826992', deal:'13646', name:'정다인', loanDate:'2025-02-11', loanAmt:'28,500,000', odStart:'2026-06-19', dpd:25, bal:'26,447,576', total:'737,809', installments:2, eodDate:'-', seg:'B2',
    lhc:20, ie:30, lcPct:12, zs:1, be:false},
-  {no:7, apply:'28492310', deal:'13811', name:'한지원', odStart:'2026-06-15', dpd:29, bal:'18,066,251', total:'466,965', installments:2, eodDate:'-', seg:'B2',
-   lhc:40, ie:20, lcPct:35, zs:0, be:true},
-  {no:8, apply:'29662023', deal:'13903', name:'서예은', odStart:'2026-06-21', dpd:20, bal:'14,728,145', total:'814,190', installments:2, eodDate:'-', seg:'B2',
+  {no:7, apply:'28492310', deal:'13811', name:'한지원', loanDate:'2024-12-03', loanAmt:'19,000,000', odStart:'2026-06-15', dpd:29, bal:'18,066,251', total:'466,965', installments:2, eodDate:'-', seg:'B2',
+   lhc:40, ie:20, lcPct:35, zs:0, be:true, specialType:'개인회생', specialStatus:'추심금지'},
+  {no:8, apply:'29662023', deal:'13903', name:'서예은', loanDate:'2025-03-08', loanAmt:'16,000,000', odStart:'2026-06-21', dpd:20, bal:'14,728,145', total:'814,190', installments:2, eodDate:'-', seg:'B2',
    lhc:45, ie:40, lcPct:60, zs:0, be:false}
 ];
 
@@ -514,12 +515,16 @@ function renderB(){
       <td style="color:#2166c9;">${r.apply}</td>
       <td style="color:#2166c9;">${r.deal}</td>
       <td>${r.name}</td>
+      <td>${r.loanDate}</td>
+      <td>${r.loanAmt}</td>
       <td>${r.odStart}</td>
       <td>${r.dpd}</td>
       <td>${r.bal}</td>
       <td>${r.total}</td>
       <td>${r.installments}</td>
       <td>${r.eodDate}</td>
+      <td>${r.specialType ? `<span class="badge red">${r.specialType}</span>` : '-'}</td>
+      <td>${r.specialStatus ? `<span class="badge gray">${r.specialStatus}</span>` : '-'}</td>
       <td><span class="badge ${r.seg==='B1' ? 'blue' : 'purple'}">${r.seg}</span></td>
       <td><span class="badge ${v.cls}">${v.text}</span></td>
       <td>${actionBadgeB(r, verdict)}</td>
@@ -540,7 +545,7 @@ function toggleDetailB(tr, r, verdict){
   const detailTr = document.createElement('tr');
   detailTr.className = 'detail-row detail-row-marker';
   const td = document.createElement('td');
-  td.colSpan = 13;
+  td.colSpan = 17;
 
   let cardsHtml = '';
   if(r.seg==='B1'){
