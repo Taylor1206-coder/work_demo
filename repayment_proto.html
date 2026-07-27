@@ -1,0 +1,876 @@
+<meta charset="UTF-8">
+<title>부분중도상환 — UI 목업</title>
+<style>
+:root{
+  --studio-bg:#EEF1F0;
+  --studio-surface:#FFFFFF;
+  --studio-ink:#16201C;
+  --studio-muted:#5B6660;
+  --studio-accent:#1F4E42;
+  --studio-line:rgba(22,32,28,0.10);
+  --studio-chip-bg:#E4ECE8;
+  --new-badge-bg:#E5F1FF;
+  --new-badge-ink:#0A4DA8;
+  --new-dash:rgba(46,133,255,0.55);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --studio-bg:#11150F;
+    --studio-surface:#1A2118;
+    --studio-ink:#E9EEE9;
+    --studio-muted:#9BA79E;
+    --studio-accent:#7FB3A0;
+    --studio-line:rgba(233,238,233,0.12);
+    --studio-chip-bg:#23291F;
+    --new-badge-bg:#12233A;
+    --new-badge-ink:#8FC0FF;
+    --new-dash:rgba(127,179,255,0.55);
+  }
+}
+:root[data-theme="dark"]{
+  --studio-bg:#11150F;
+  --studio-surface:#1A2118;
+  --studio-ink:#E9EEE9;
+  --studio-muted:#9BA79E;
+  --studio-accent:#7FB3A0;
+  --studio-line:rgba(233,238,233,0.12);
+  --studio-chip-bg:#23291F;
+  --new-badge-bg:#12233A;
+  --new-badge-ink:#8FC0FF;
+  --new-dash:rgba(127,179,255,0.55);
+}
+:root[data-theme="light"]{
+  --studio-bg:#EEF1F0;
+  --studio-surface:#FFFFFF;
+  --studio-ink:#16201C;
+  --studio-muted:#5B6660;
+  --studio-accent:#1F4E42;
+  --studio-line:rgba(22,32,28,0.10);
+  --studio-chip-bg:#E4ECE8;
+  --new-badge-bg:#E5F1FF;
+  --new-badge-ink:#0A4DA8;
+  --new-dash:rgba(46,133,255,0.55);
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0;
+  background:var(--studio-bg);
+  color:var(--studio-ink);
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  padding:28px 16px 80px;
+}
+
+/* ---------- outer studio chrome (adapts to theme) ---------- */
+.studio-head{
+  max-width:1180px;
+  margin:0 auto 20px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:14px;
+}
+.studio-head h1{
+  font-size:20px;
+  font-weight:700;
+  margin:0 0 6px;
+  letter-spacing:-0.01em;
+  text-wrap:balance;
+}
+.studio-head p{
+  margin:0;
+  font-size:13.5px;
+  color:var(--studio-muted);
+  max-width:60ch;
+  line-height:1.6;
+}
+.legend{
+  display:flex;
+  gap:16px;
+  font-size:12.5px;
+  color:var(--studio-muted);
+  flex-shrink:0;
+}
+.legend span{display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+.legend i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+.legend .dot-existing{background:var(--studio-muted);}
+.legend .dot-new{background:#2E85FF;}
+
+/* ---------- browser chrome frame ---------- */
+.browser-frame{
+  max-width:1180px;
+  margin:0 auto;
+  border-radius:14px;
+  overflow:hidden;
+  background:var(--studio-surface);
+  border:1px solid var(--studio-line);
+  box-shadow:0 20px 60px -20px rgba(0,0,0,0.35);
+}
+.browser-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:11px 14px;
+  background:var(--studio-chip-bg);
+  border-bottom:1px solid var(--studio-line);
+}
+.browser-dots{display:flex;gap:6px;flex-shrink:0;}
+.browser-dots i{width:9px;height:9px;border-radius:50%;background:var(--studio-line);}
+.browser-url{
+  flex:1;
+  font-size:12px;
+  color:var(--studio-muted);
+  background:var(--studio-surface);
+  border:1px solid var(--studio-line);
+  border-radius:7px;
+  padding:5px 10px;
+  font-variant-numeric:tabular-nums;
+  overflow-x:auto;
+  white-space:nowrap;
+}
+
+/* ============================================================
+   INNER REPLICA — forced light, literal colors (not theme vars)
+   This is the actual honesttest.kr page look; it must not
+   invert with the viewer's theme, since it's a faithful clone.
+   ============================================================ */
+.page-replica{
+  background:#FFFFFF;
+  color:#303339;
+  font-family:"HFFintechGothic","맑은 고딕","Malgun Gothic","Apple SD Gothic Neo","Apple SD 산돌고딕 Neo","Microsoft NeoGothic","Droid sans",sans-serif;
+}
+.page-replica .nav{
+  height:64px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:0 40px;
+  border-bottom:1px solid rgba(48,51,57,0.06);
+}
+.page-replica .logo{font-weight:700;font-size:17px;color:#303339;letter-spacing:-0.01em;}
+.page-replica .logo b{color:#0443A1;margin-right:2px;}
+.page-replica .navlinks{display:flex;gap:26px;font-size:14px;color:#303339;}
+.page-replica .navlinks span:hover{color:#0443A1;}
+.page-replica .navuser{font-size:14px;color:#606772;}
+
+.page-replica .titlewrap{padding:40px 40px 8px;}
+.page-replica .titlewrap .eyebrow{font-size:14px;color:#606772;margin:0 0 6px;}
+.page-replica .titlewrap h2{font-size:26px;font-weight:600;margin:0;letter-spacing:-0.01em;}
+
+.page-replica .content{padding:24px 40px 8px;display:flex;flex-direction:column;gap:20px;}
+
+.hf-card{
+  background:#FFFFFF;
+  border-radius:16px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.06);
+  padding:32px;
+}
+.card-row{display:flex;gap:20px;flex-wrap:wrap;}
+.card-row .hf-card{flex:1 1 320px;min-width:280px;}
+
+.hf-card h3{font-size:16px;font-weight:600;margin:0 0 18px;}
+.kv{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:14.5px;}
+.kv .k{color:#606772;}
+.kv .v{font-weight:500;color:#303339;font-variant-numeric:tabular-nums;}
+.kv .v.strong{font-weight:600;}
+.pill-btn{
+  display:inline-flex;align-items:center;gap:8px;
+  background:#F1F2F4;color:#2E85FF;border:none;
+  border-radius:10px;padding:11px 20px;font-size:14px;font-weight:500;
+  cursor:pointer;font-family:inherit;
+}
+.pill-btn:hover{background:#E9EBEE;}
+.acct-box{margin-top:14px;padding-top:14px;border-top:1px dashed rgba(48,51,57,0.1);}
+.acct-box .row1{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:#606772;margin-bottom:4px;}
+.acct-box .row2{display:flex;justify-content:space-between;font-size:15px;font-weight:600;}
+.copylink{color:#2E85FF;font-size:13px;font-weight:500;cursor:pointer;}
+.acct-note{font-size:12.5px;color:#8A919B;margin-top:10px;line-height:1.6;}
+.deposit-box{background:#F8F8F9;border-radius:10px;padding:18px 20px;}
+.acct-block{padding-bottom:14px;border-bottom:1px dashed rgba(48,51,57,0.12);margin-bottom:14px;}
+.acct-label{font-size:13px;color:#606772;margin-bottom:6px;}
+.acct-value-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.acct-value{font-size:15px;font-weight:600;color:#303339;font-variant-numeric:tabular-nums;}
+.copy-icon-btn{background:none;border:none;padding:5px;margin:-5px;cursor:pointer;color:#2E85FF;display:flex;align-items:center;justify-content:center;border-radius:6px;flex-shrink:0;}
+.copy-icon-btn:hover{background:#EEF1F4;}
+
+.sched{overflow-x:auto;}
+.sched table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums;}
+.sched th{text-align:right;color:#606772;font-weight:400;font-size:14px;padding:10px 12px;white-space:nowrap;}
+.sched th:first-child,.sched td:first-child{text-align:left;}
+.sched td{text-align:right;padding:11px 12px;white-space:nowrap;}
+.sched tbody tr{background:#F8F8F9;}
+.sched tbody tr:nth-child(2n){background:#FFFFFF;}
+.sched-ellipsis{text-align:center;color:#8A919B;padding:8px;font-size:13px;}
+
+/* ---- NEW proposed section ---- */
+.new-section-wrap{position:relative;}
+.new-section-wrap .hf-card{
+  border:1.5px dashed var(--new-dash);
+  position:relative;
+}
+.new-badge{
+  position:absolute;
+  top:-11px;left:28px;
+  background:var(--new-badge-bg);
+  color:var(--new-badge-ink);
+  font-size:12px;font-weight:700;
+  padding:4px 10px;border-radius:999px;
+  letter-spacing:0.01em;
+}
+.new-header{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:4px;}
+.new-header .titles h3{margin:0 0 4px;}
+.new-header .titles p{margin:0;font-size:13.5px;color:#606772;}
+.rationale-toggle{
+  display:inline-flex;align-items:center;gap:7px;
+  background:#F1F2F4;color:#303339;border:none;border-radius:999px;
+  padding:8px 14px;font-size:12.5px;font-weight:500;cursor:pointer;font-family:inherit;
+  flex-shrink:0;
+}
+.rationale-toggle .sw{width:26px;height:15px;border-radius:999px;background:#D5D9DE;position:relative;transition:background .15s;flex-shrink:0;}
+.rationale-toggle .sw::after{content:"";position:absolute;top:2px;left:2px;width:11px;height:11px;border-radius:50%;background:#fff;transition:transform .15s;}
+.rationale-toggle.on .sw{background:#0443A1;}
+.rationale-toggle.on .sw::after{transform:translateX(11px);}
+
+/* step tracker */
+.tracker{display:flex;align-items:flex-start;gap:0;margin:22px 0 26px;}
+.tstep{flex:1;display:flex;flex-direction:column;align-items:center;position:relative;}
+.tstep .dot{width:22px;height:22px;border-radius:50%;background:#F1F2F4;color:#8A919B;display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;border:2px solid #F1F2F4;z-index:1;}
+.tstep .lbl{margin-top:8px;font-size:12px;color:#8A919B;text-align:center;line-height:1.4;}
+.tstep::before{content:"";position:absolute;top:11px;left:-50%;width:100%;height:2px;background:#EBEDEF;z-index:0;}
+.tstep:first-child::before{display:none;}
+.tstep.done .dot{background:#0443A1;border-color:#0443A1;color:#fff;}
+.tstep.done .lbl{color:#303339;}
+.tstep.done::before,.tstep.active::before{background:#0443A1;}
+.tstep.active .dot{background:#fff;border-color:#0443A1;color:#0443A1;}
+.tstep.active .lbl{color:#0443A1;font-weight:600;}
+
+.step-body{display:flex;gap:28px;flex-wrap:wrap;}
+.step-col{flex:1 1 320px;min-width:280px;}
+.step-col h4{font-size:13.5px;font-weight:600;color:#606772;margin:0 0 12px;}
+.check-box,.breakdown-box{background:#F8F8F9;border-radius:10px;padding:6px 16px;}
+.check-row{display:flex;align-items:flex-start;gap:10px;padding:10px 0;font-size:14px;border-bottom:1px solid rgba(48,51,57,0.05);}
+.check-row:last-child{border-bottom:none;}
+.check-row .ic{width:18px;height:18px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;color:#fff;flex-shrink:0;margin-top:1px;}
+.check-row .ic.ok{background:#1E8E5A;}
+.check-row .ic.no{background:#D64545;}
+.check-row.fail{color:#8A919B;}
+.check-row .txt{display:flex;flex-direction:column;gap:3px;}
+.check-row .sub{font-size:12px;color:#8A919B;line-height:1.55;font-weight:400;}
+.check-row.fail .sub{color:#C1443B;}
+
+.block-notice{display:flex;gap:14px;align-items:flex-start;background:#FFF7EC;border-radius:10px;padding:16px 18px;}
+.block-notice .ic{width:28px;height:28px;border-radius:50%;background:#B07D22;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+.block-notice b{display:block;font-size:14.5px;margin-bottom:4px;color:#303339;}
+.block-notice p{margin:0;font-size:13px;color:#606772;line-height:1.6;}
+.notes{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
+.notes li{font-size:13.5px;color:#606772;line-height:1.6;padding-left:14px;position:relative;}
+.notes li::before{content:"·";position:absolute;left:0;color:#8A919B;}
+
+.demo-toggle{font-size:12.5px;color:#2E85FF;cursor:pointer;text-decoration:underline;text-underline-offset:2px;background:none;border:none;font-family:inherit;padding:0;margin-top:14px;}
+
+.field-label{font-size:13px;color:#606772;margin-bottom:8px;display:block;}
+.amount-input-wrap{display:flex;align-items:baseline;gap:8px;border:1.5px solid #E1E4E8;border-radius:10px;padding:12px 16px;margin-bottom:8px;}
+.amount-input-wrap input{
+  border:none;outline:none;font-size:20px;font-weight:600;color:#303339;width:100%;
+  font-variant-numeric:tabular-nums;font-family:inherit;background:transparent;
+}
+.amount-input-wrap span{font-size:15px;color:#606772;flex-shrink:0;}
+.helper{font-size:12.5px;color:#8A919B;margin:0 0 20px;line-height:1.6;}
+.before-after{display:flex;align-items:center;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid rgba(48,51,57,0.06);}
+.ba-tile{flex:1;text-align:center;background:#F8F8F9;border-radius:10px;padding:12px 10px;}
+.ba-tile .ba-label{display:block;font-size:11.5px;color:#8A919B;margin-bottom:6px;}
+.ba-tile .ba-value{display:block;font-size:17px;font-weight:700;color:#303339;font-variant-numeric:tabular-nums;}
+.ba-tile.after{background:#E5F1FF;}
+.ba-tile.after .ba-value{color:#0443A1;}
+.ba-tile .ba-sub{display:block;font-size:10.5px;color:#8A919B;margin-top:4px;}
+.ba-arrow{font-size:16px;color:#C7CCD2;flex-shrink:0;}
+.compare-mini{display:flex;gap:10px;margin-top:6px;}
+.compare-mini .c{flex:1;background:#F8F8F9;border-radius:10px;padding:12px 14px;}
+.compare-mini .c b{display:block;font-size:12.5px;margin-bottom:4px;}
+.compare-mini .c.no b{color:#8A919B;}
+.compare-mini .c.yes b{color:#0443A1;}
+.compare-mini .c p{margin:0;font-size:12px;color:#606772;line-height:1.55;}
+
+.date-input-wrap{position:relative;max-width:220px;}
+.date-input-wrap input[type="date"]{
+  width:100%;border:1.5px solid #E1E4E8;border-radius:10px;padding:11px 13px;
+  font-size:14px;color:#303339;font-family:inherit;font-variant-numeric:tabular-nums;
+  background:#fff;cursor:pointer;
+}
+.date-input-wrap input[type="date"]:focus{outline:none;border-color:#2E85FF;}
+
+.bd-row{display:flex;justify-content:space-between;align-items:center;padding:11px 0;font-size:14.5px;border-bottom:1px solid rgba(48,51,57,0.06);}
+.bd-row:last-child{border-bottom:none;}
+.bd-row .k{color:#606772;}
+.bd-row .v{font-variant-numeric:tabular-nums;font-weight:500;}
+.bd-total{display:flex;justify-content:space-between;padding:16px 0 4px;font-size:16px;font-weight:700;}
+.bd-total .v{color:#0443A1;font-variant-numeric:tabular-nums;}
+
+.confirm-recap{background:#F8F8F9;border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+.agree-row{display:flex;align-items:center;gap:10px;font-size:13.5px;color:#303339;margin-bottom:18px;cursor:pointer;}
+.agree-row input{width:17px;height:17px;accent-color:#0443A1;cursor:pointer;}
+
+.status-pill{display:inline-block;padding:5px 12px;border-radius:999px;font-size:12.5px;font-weight:600;}
+.status-pill.wait{background:#FFF3DE;color:#B0741C;}
+.status-pill.done{background:#E1F4EA;color:#1E8E5A;}
+.status-pill.canceled{background:#FBE7E6;color:#C1443B;}
+.mini-track{display:flex;align-items:center;gap:0;margin:16px 0 18px;}
+.mts{flex:1;text-align:center;font-size:11.5px;color:#8A919B;position:relative;padding-top:14px;}
+.mts::before{content:"";position:absolute;top:4px;left:-50%;width:100%;height:2px;background:#EBEDEF;}
+.mts:first-child::before{display:none;}
+.mts::after{content:"";position:absolute;top:0px;left:50%;transform:translateX(-50%);width:9px;height:9px;border-radius:50%;background:#EBEDEF;}
+.mts.pass::after{background:#0443A1;}
+.mts.pass::before,.mts.now::before{background:#0443A1;}
+.mts.now::after{background:#fff;border:2px solid #0443A1;width:10px;height:10px;}
+.mts.now{color:#0443A1;font-weight:600;}
+.mts.canceled::after{background:#C1443B;}
+.mts.canceled::before{background:#C1443B;}
+.mts.canceled{color:#C1443B;font-weight:600;}
+
+.step-nav{display:flex;justify-content:space-between;align-items:center;margin-top:26px;padding-top:20px;border-top:1px solid rgba(48,51,57,0.06);}
+.primary-btn{
+  background:#0443A1;color:#fff;border:none;border-radius:10px;
+  padding:13px 26px;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;
+}
+.primary-btn:disabled{background:#C7D3E4;cursor:not-allowed;}
+.ghost-btn{background:none;border:none;color:#606772;font-size:14px;cursor:pointer;font-family:inherit;padding:10px 4px;}
+.ghost-btn:disabled{visibility:hidden;}
+
+.rationale-panel{
+  margin-top:22px;background:#F5F9FF;border-left:3px solid #2E85FF;border-radius:0 10px 10px 0;
+  padding:16px 18px;display:none;
+}
+.rationale-panel.show{display:block;}
+.rationale-panel .rp-title{font-size:11.5px;font-weight:700;color:#0A4DA8;letter-spacing:0.02em;margin-bottom:10px;text-transform:uppercase;}
+.rationale-panel ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px;}
+.rationale-panel li{font-size:13px;color:#2B3A55;line-height:1.6;padding-left:16px;position:relative;}
+.rationale-panel li::before{content:"—";position:absolute;left:0;color:#7DA6DE;}
+.rationale-panel li.risk{color:#8A3A2A;}
+.rationale-panel li.risk::before{content:"⚠";color:#C1443B;}
+.rationale-panel li b{font-variant-numeric:tabular-nums;color:#0A4DA8;}
+.rationale-panel li.risk b{color:#C1443B;}
+
+.existing-static{padding:0 40px 40px;}
+.existing-static .hf-card{background:#FFFFFF;}
+.existing-tag{font-size:11px;color:#8A919B;margin:0 0 10px;letter-spacing:0.02em;}
+.footer-btn-row{display:flex;justify-content:center;padding:8px 40px 44px;}
+
+@media (max-width:640px){
+  .page-replica .nav,.page-replica .titlewrap,.page-replica .content,.existing-static,.footer-btn-row{padding-left:18px;padding-right:18px;}
+  .page-replica .navlinks{display:none;}
+  .hf-card{padding:22px;}
+  .step-body{gap:20px;}
+}
+</style>
+
+<div class="studio-head">
+  <div>
+    <h1>부분중도상환 셀프서비스 — UI 워크스루</h1>
+    <p>실제 페이지(<code>personal-loan-credit.honesttest.kr</code> 대출 상세)에서 추출한 디자인 토큰을 그대로 적용한 목업입니다. 점선 테두리 카드가 PRD 기준 신규 제안 영역입니다.</p>
+  </div>
+  <div class="legend">
+    <span><i class="dot-existing"></i>기존 페이지 요소</span>
+    <span><i class="dot-new"></i>신규 제안 (부분중도상환)</span>
+  </div>
+</div>
+
+<div class="browser-frame">
+  <div class="browser-bar">
+    <div class="browser-dots"><i></i><i></i><i></i></div>
+    <div class="browser-url">personal-loan-credit.honesttest.kr/v2/mypage/loan/apply/detail/71</div>
+  </div>
+
+  <div class="page-replica">
+    <div class="nav">
+      <div class="logo"><b>hf</b>HonestFund</div>
+      <div class="navlinks"><span>회사소개</span><span>투자하기</span><span>대출받기</span><span>신용관리</span><span>고객지원</span></div>
+      <div class="navuser">김신규님</div>
+    </div>
+
+    <div class="titlewrap">
+      <p class="eyebrow">대출 상세 내역</p>
+      <h2>개인신용대출 16859호</h2>
+    </div>
+
+    <div class="content">
+      <div class="card-row">
+        <div class="hf-card">
+          <h3>대출 기본 정보</h3>
+          <div class="kv"><span class="k">대출 금액</span><span class="v">10,000,000 원</span></div>
+          <div class="kv"><span class="k">총 부담 이율</span><span class="v">연 17.38%</span></div>
+          <div class="kv"><span class="k">대출 기간</span><span class="v">72개월</span></div>
+          <div class="kv"><span class="k">대출 시작일</span><span class="v">2026.06.21</span></div>
+        </div>
+        <div class="hf-card">
+          <h3>상환 정보</h3>
+          <div class="kv"><span class="k">상환 상태</span><span class="v strong">정상 상환 중</span></div>
+          <div class="kv"><span class="k">대출 잔액</span><span class="v strong">10,000,000 원</span></div>
+          <div class="kv"><span class="k">다음 상환금</span><span class="v">199,042 원</span></div>
+          <div class="acct-box">
+            <div class="row1"><span>상환용 가상계좌</span><span class="copylink">복사하기</span></div>
+            <div class="row2"><span>신한은행</span><span>562-1469-0663928</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hf-card sched">
+        <h3>대출금 상환 스케줄</h3>
+        <table>
+          <thead><tr><th>회차</th><th>상환 예정일</th><th>원금</th><th>이자</th><th>상환예정금액</th><th>상환 후 원금잔액</th></tr></thead>
+          <tbody>
+            <tr><td>1</td><td>26.07.15</td><td>81,775</td><td>103,101</td><td>199,042</td><td>9,918,225</td></tr>
+            <tr><td>2</td><td>26.08.17</td><td>78,223</td><td>132,083</td><td>224,472</td><td>9,840,002</td></tr>
+            <tr><td>3</td><td>26.09.15</td><td>79,378</td><td>131,041</td><td>224,585</td><td>9,760,624</td></tr>
+            <tr><td>4</td><td>26.10.15</td><td>85,197</td><td>125,791</td><td>225,154</td><td>9,675,427</td></tr>
+          </tbody>
+        </table>
+        <div class="sched-ellipsis">⋯ 72회차 중 68회차 더 있음</div>
+      </div>
+
+      <!-- ============ NEW SECTION ============ -->
+      <div class="new-section-wrap">
+        <div class="hf-card" id="newCard">
+          <span class="new-badge">신규 제안 영역</span>
+          <div class="new-header">
+            <div class="titles">
+              <h3>부분중도상환 안내</h3>
+              <p>만기 전, 남은 원금 일부를 미리 갚을 수 있어요</p>
+            </div>
+            <button class="rationale-toggle" id="rationaleBtn" onclick="toggleRationale()">
+              <span class="sw"></span> 기획 근거 보기
+            </button>
+          </div>
+
+          <div class="tracker" id="tracker"></div>
+          <div class="step-body" id="stepBody"></div>
+          <div class="rationale-panel" id="rationalePanel"></div>
+
+          <div class="step-nav">
+            <button class="ghost-btn" id="prevBtn" onclick="prevStep()">← 이전 단계로</button>
+            <button class="primary-btn" id="nextBtn" onclick="nextStep()"></button>
+          </div>
+        </div>
+      </div>
+      <!-- ============ /NEW SECTION ============ -->
+
+    </div>
+
+    <div class="existing-static">
+      <p class="existing-tag">↓ 기존 페이지에 이미 있는 섹션 (참고용, 변경 없음)</p>
+      <div class="hf-card">
+        <h3>전액 중도상환 안내</h3>
+        <div class="card-row" style="margin-top:16px;">
+          <div style="flex:1 1 300px;">
+            <div class="kv"><span class="k">전액 중도 상환일</span><span class="v">2026.07.22</span></div>
+            <div class="kv" style="margin-bottom:10px;"><span class="k">납부금액</span><span class="v strong" style="color:#0443A1;font-size:16px;">10,268,092 원</span></div>
+            <div class="breakdown-box">
+              <div class="bd-row"><span class="k">원금</span><span class="v">10,000,000 원</span></div>
+              <div class="bd-row"><span class="k">이자</span><span class="v">132,926 원</span></div>
+              <div class="bd-row"><span class="k">중도상환수수료</span><span class="v">121,000 원</span></div>
+            </div>
+          </div>
+          <ul class="notes" style="flex:1 1 300px;">
+            <li>전액 중도상환은 약정된 만기일 전에 잔여 원금, 이자, 플랫폼이용료를 중도상환수수료와 함께 상환하는 것을 의미합니다.</li>
+            <li>상환용 가상계좌에 전액 중도상환금액을 입금해 주세요.</li>
+            <li>일부 중도상환을 원하시는 분은 고객센터(02-565-8856)로 연락주시기 바랍니다.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-btn-row">
+      <button class="pill-btn">이전 단계로 돌아가기</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const won = n => n.toLocaleString('ko-KR') + ' 원';
+
+const STEPS = ['안내 및 신청','상환금 입력','예상금액 확인','결과 확인','진행 현황'];
+
+const RATIONALE = [
+  [
+    {t:'체크리스트 노출 기준 = "고객이 스스로 알거나 자신의 이력과 관련된 항목만" — 개인신용대출 상품 여부(페이지 진입으로 이미 구분됨), 상품차수 기표 완료(딜 펀딩 구조라는 순수 백엔드 정보, 고객이 알 방법이 없음), 유동화 채권 여부(마찬가지로 백엔드 전용 정보)는 모두 화면에서 제외.'},
+    {t:'남은 3개(연체 잔액·대기 중인 신청·선납 이력)는 고객 본인의 상환·신청 행동과 직접 관련돼 "내가 왜 되는지/안 되는지"를 스스로도 짐작할 수 있는 항목이라 유지.'},
+    {t:'제외된 항목들은 화면에 안 보일 뿐 <b>validateAdditionalRepayment()</b> 등 백엔드 검증은 그대로 수행됨 — 걸리면 통과 체크리스트 자체가 아예 안 뜨고 아래 차단 안내로 전환.'},
+    {t:'"상품차수"는 상환회차(1~72회차)가 아니라 <b>딜의 투자자 측 펀딩 단위</b>(연계투자 시 리테일 1개+기관 N개)를 뜻함 — 실제로 걸리는 경우는 "하이브리드 만기연장"(추가모집분 신규 기표) 중 그 기표가 안 끝난 극히 좁은 구간뿐. "일반 만기연장"은 무관.'},
+    {t:'개인신용대출의 만기연장 정책은 위키 원출처가 2022-11 시점 "미정의"로 기록 — 2026년 현재도 유효한지 미확인. 이 불확실성 때문에 "만기연장 채권 판별" 로직을 신규로 만들어 사전 차단하는 대신, 기존 체크를 그대로 재사용하고 결과만 사후에 뭉뚱그려 안내하기로 결정(신규 개발 최소화 원칙과 일치).'},
+    {t:'차단 시 UI는 원칙적으로 사유를 나열하지 않고 "정확한 사유는 상담사가 확인" + CS 연결로 단일화 — 단, "대기 중인 신청 있음"은 예외(아래 참조).'},
+    {t:'"대기 중인 신청 있음" 예외 처리(리뷰에서 발견된 이슈 수정) — 진행 현황(5단계)에서 미입금 상태로 [처음으로]를 누르면 0단계로 돌아오는데, 기존 신청이 아직 살아있어 "대기 중인 신청 없음" 조건에 걸려 신청 불가 상태가 된다. 그런데 이 상태에서 5단계(진행 현황)로 돌아가 현황을 확인할 방법이 없어 막다른 길이 되는 버그를 발견함. 다른 차단 사유(연체·선납이력 등)와 달리 이 사유는 고객이 스스로 원인을 알고 즉시 조치(현황 확인)할 수 있으므로, 일반 차단 안내 대신 "이미 진행 중인 신청이 있어요" + "신청 현황 보기" 버튼으로 예외 처리해 5단계로 바로 돌아갈 수 있게 함.', risk:true},
+    {t:'"미처리 선수금 잔액" 예외 추가(구조적 충돌 정리 후) — 처음엔 "자동취소되면 재신청이 언제든 가능하다"고 가정했으나, 자동취소는 정의상 항상 딜에 선수금 잔액을 남기고(4-⑤ 참조), 그 잔액이 있는 한 1절의 진입 차단 조건에 걸려 재신청도 함께 막힌다는 걸 재검토 중 확인함. 이 차단을 풀면 오적용·뒤섞임 리스크가 커서(선수금이 어떤 신청 때문인지 구분 불가) 차단 자체는 유지하기로 하고, 대신 이 사유도 "대기 중인 신청 있음"과 같은 원칙으로 예외 처리 — "이전 입금 건이 아직 정리되지 않았어요"로 구체 안내 + CS 연결. 단 이 케이스는 되돌아갈 신청 자체가 없어(이미 취소됨) "신청 현황 보기" 버튼은 제공하지 않음.', risk:true},
+    {t:'"선납 신청 이력 없음"(구 "선수금 정산 이력 없음") 조건의 배경 — 2026-07-14 딜 17598 사고로 확인된 이자 계산 비대칭 버그. 근본 수정 전까지 선납 이력(조기 완전실현 회차)이 있으면 신청 자체를 차단해야 함(현재 미해결).', risk:true},
+    {t:'"미처리 선수금 잔액 없음"은 화면엔 안 보이지만 별도 백엔드 조건(오늘 분리, PRD 1절 참조) — 위 선납 이력과 인과관계가 다름(회차를 조기 완전실현시키지 않은 단순 잔액은 이자계산 버그를 유발하지 않음). 부분중도상환 불일치 입금으로 어드민이 아직 정리 못한 예외 케이스가 있다는 신호라, 정리 전까지 신규 신청을 막는 운영 리스크 방지 목적.', risk:true},
+    {t:'PRD 5-2: 요청 dealUid가 로그인한 userUid 본인 소유인지 확인하는 권한 검증 — 어드민 API엔 없던 체크라 신규 필수.'},
+  ],
+  [
+    {t:'PRD 3-2: 최소 금액 하한은 코드에 없는 신규 정책. 정확한 수치는 최근 3~6개월 실데이터 분포로 확정 필요 (Open Question).'},
+    {t:'PRD 1-1: 선납은 원금이 줄지 않는 반면 부분중도상환은 미래 상환예정금 자체가 감액됨 — 두 개념을 혼동하면 오히려 문의가 늘 수 있어 화면상 구분 필수.'},
+    {t:'PRD 3-1/4-②: 가능 일자는 기존 <b>getAllowedAdditionalRepaymentDateList()</b>를 그대로 재사용. 기표 당월 자체를 막는 로직은 없음.'},
+    {t:'"가장 이른 처리일" = <b>오늘</b>(코드 재검증, `getAllowedAdditionalRepaymentDateList()` — 선납 이력 없으면 시작일이 오늘 당일부터, 있으면 그 선납 회차의 청구일부터로 밀림). 초기 설계는 5·10·15·20·25일을 매달 전부 선택 불가 처리했으나 이는 오설계 — 그 5일은 <b>플랫폼 전체의 처리 주기</b>일 뿐, 개별 딜은 그중 자기 몫의 하루만 배정받는다(이 딜은 매달 15일). 다른 딜의 처리일은 이 화면과 무관하고, 애초에 유효 구간이 "다음 정기상환일까지"로 상한이 걸려 있어 요일별 제외가 불필요함을 확인.'},
+    {t:'날짜 선택 UI는 캘린더 그리드 → 날짜 칩 목록 → <b>네이티브 date input(min/max만 지정)</b> 순으로 단순화(오늘 결정). 유효 구간이 단순 연속 범위인 이상 커스텀 위젯보다 표준 컨트롤이 더 익숙하고 구현 비용도 낮음 — "가장 이른 처리일" 퀵버튼만 별도로 유지.'},
+    {t:'유효 범위 정정(오늘, 코드 재검증) — 애초에 "[오늘+1일, 다음 정기상환일 전날]"로 문서화했던 건 코드와 달랐음. 실제 <b>getAllowedAdditionalRepaymentDateList()</b>는 (1) 시작일이 오늘 "당일"부터(+1일 아님), (2) 종료일도 다음 정기상환일 "당일까지"(전날 아님) 포함, (3) 선납 이력이 있으면 시작일이 오늘이 아니라 그 선납 회차의 청구일로 밀리는 3가지를 모두 반영해야 함. min/max 값은 반드시 서버 응답을 그대로 써야 하고 클라이언트가 "오늘" 기준으로 재계산하면 안 됨(PRD 5-3 참조).', risk:true},
+    {t:'취소 정책 변경(신규) — 부분중도상환 확정 후에는 외부 API 연동(청구·투자자분배·KFTC 동기화) 롤백이 어려워 직접 취소를 지원하지 않기로 결정. 신청 전 마지막 안내 지점인 이 단계에서부터 신중한 입력을 유도하는 문구를 추가.', risk:true},
+  ],
+  [
+    {t:'코드 SoT(<b>DealClaimAdditionalChargeService</b>) — 중도청구는 중간 회차(subSeq&gt;0)에 원금을 청구한 뒤 "Charge Sync"로 <b>감소된 미청구 원금 기준 향후 정기 회차를 재계산</b>. 즉 이번 신청 이후 남은 회차의 원금·이자 금액이 실제로 바뀜 — 안내 문구에 명시 필요(오늘 추가).'},
+    {t:'만기일 유지 여부 확인됨(오늘, `baas/monthly-settlement-fsb-spec.md`) — "중도상환 시는 최초 만기일 유지"(2025-08-06 정책 결정, 대출유예 등 예외 케이스 제외). 즉 부분중도상환은 <b>기간단축형이 아니라 월상환액감소형</b> — 만기는 그대로, 남은 개월 수 상환액만 줄어듦. 안내 문구에 "만기일 유지"를 명시해 고객 문의를 예방(추가). 단, 정확한 재상각 공식(수치)까지는 근거 문서에 없어 Before/After 수치는 여전히 근사치.'},
+    {t:'"예시 산정값이며" 표현 삭제(오늘) — 이 화면은 고객이 실제로 입금할 금액을 확인하는 화면이라, 실제 서비스에서는 여기 뜨는 금액이 곧 정확한 청구액(=simulateAdditionalRepaymentDetail() 결과)이지 "예시"가 아님. "예시 산정값"이라는 표현은 이 프로토타입의 계산식이 근사치라서 붙인 것일 뿐, 실제 화면 문구로는 부적절해 제거.'},
+    {t:'"실제 신청 시 정확한 금액으로 다시 계산돼요" 문구 재수정(오늘) — 이 표현은 "신청 확정 시점에 별도 재계산 단계가 있다"는 오해를 주는데, 실제로는 그런 단계가 없음(위 항목과 동일 결론). 금액이 바뀌는 유일한 변수는 <b>선택한 상환일</b>(경과이자가 경과일수 기반이라 날짜에 좌우됨)이므로, "상환일을 바꾸면 금액도 달라진다"는 의미로 정정 — 존재하지 않는 재계산 단계를 암시하지 않도록.'},
+    {t:'"경과이자" 계산 로직 정정(오늘) — 코드 SoT `core-banking-settlement.md` §4-4 중도청구: 기존 정규회차를 "정규회차 시작일~중도청구시점"과 "중도청구시점~다음 정기상환일"로 쪼개고, 앞쪽 구간 이자를 중도회차로 별도 청구. 즉 경과이자는 <b>상환 원금(amt) 크기와 무관</b>하고 경과일수 × 잔여원금 전체 × 약정이자율로 결정됨 — 초기 목업이 amt에 비례해 계산하던 것은 오류였고, 오늘 수정. 화면엔 그 기준 기간(정규회차 시작일~중도청구 예정일)을 라벨 옆에 병기.'},
+    {t:'"향후 3개월 평균 상환예상액 Before/After"(오늘 추가) — 정확한 재상각(amortization) 재계산은 백엔드 로직(원금·이자·플랫폼이용료 분리 상각) 전체를 복제해야 해서 이번 목업엔 <b>원금 감소 비율에 비례한 단순 근사치</b>만 반영함(예: 원금 30% 상환 시 평균 월상환액도 약 30% 감소로 근사). 실제 화면 문구도 "근사치"임을 명시. 정확한 값은 `simulateAdditionalRepaymentDetail()` 응답에 향후 N회차 스케줄 미리보기를 포함하도록 API 확장이 필요할 수 있음(5-2 신규 개발 후보로 검토 필요).'},
+    {t:'PRD 3-3: MVP는 원금고정 단일 방식만 노출 — 상환금고정은 잔액에 근접한 요청 시 예외가 발생하는 태생적 한계가 있어 2차 검토로 미룸.'},
+    {t:'PRD 3-4: 부족충당 워터폴 개념이 없음 — 원금·경과이자·중도상환수수료는 항상 전액 동시 청구됨.'},
+    {t:'PRD 5-3: 계산된 수수료가 법정최고금리 한도에 걸려 예상보다 낮게 산출될 수 있음(정상 동작) — 사후 문의 방지를 위해 안내 문구 필요.'},
+    {t:'"확정 전까지는 언제든 취소할 수 있어요" 문구 삭제 — 취소 정책 변경(오늘)에 따라 "신청 완료 후에는 직접 취소 불가, 입금 전이라면 고객센터로만 요청 가능"으로 대체.', risk:true},
+    {t:'"정확한 금액으로 한 번에 입금, 다르면 자동취소" 안내 추가(오늘, 정책 변경) — 이체한도로 인한 분할 입금을 더 이상 수용하지 않기로 결정. 신청 후 바로 보게 되는 마지막 안내 화면이라 여기서부터 명확히 고지.', risk:true},
+  ],
+  [
+    {t:'PRD 4-④: 기존 <b>requestAdditionalRepayment()</b> 재사용, 신청 주체만 신규(adminUid 대신 인증된 userUid).'},
+    {t:'PRD 5-2: <b>request_channel</b>(ADMIN/SYSTEM_AUTO/CUSTOMER_SELF) 컬럼 신규 제안 — admin_uid NULL만으로는 시스템 자동감지 케이스와 구분 불가. 자동취소 로직도 이 컬럼(CUSTOMER_SELF만 해당)으로 분기하므로 중요도 상향(오늘).'},
+    {t:'PRD 5-3: 동일 사용자의 동시 다중 신청 레이스 컨디션 위험 — idempotency key 또는 DB 유니크 제약 검토 필요.', risk:true},
+    {t:'동의 문구 변경(오늘) — "처리 전 취소 가능" → "신청 완료 후 직접 취소 불가, 입금 전이라면 고객센터로만 취소 요청 가능"으로 정정. 신청 확정 전 마지막 확인 지점이라 정확한 취소 정책 고지가 특히 중요.'},
+    {t:'"입금액이 다르면 자동 취소됨" 동의 문구 추가(오늘, 정책 변경) — 신청 확정 직전 마지막 확인 지점이므로, 정확한 금액 입금 원칙을 다시 한번 명시.', risk:true},
+  ],
+  [
+    {t:'PRD 4-⑤/⑥: 입금은 기존 가상계좌 채널 그대로 안내. "신청 취소하기" 버튼 삭제(오늘) — 개발팀 논의 결과 확정 후 취소 시 외부 API 연동(청구·투자자분배·KFTC) 롤백이 어려워, 직접 취소 대신 고객센터 연결로 대체. 입금 전이라면 상담원이 기존 어드민 취소 기능(<b>cancelUnhandledAdditionalRepaymentRequestByUid</b>)으로 대신 처리하고, 입금 후에는 취소 자체가 불가능.', risk:true},
+    {t:'"고객센터 연결하기" 버튼 → 전화번호(02-565-8856) 직접 노출로 변경(오늘) — 연결할 적합한 고객센터 페이지가 현재 없어, 탭하면 바로 전화가 걸리는 <b>tel: 링크</b>로 대체.'},
+    {t:'PRD 5-2: 고객向 신규 알림(접수·처리완료) 별도 추가 필요 — 기존 Slack Watcher(Prepayment 채널)는 운영/CS向으로 그대로 유지.'},
+    {t:'"선수금 입금 허용" 자동 전환 필요(오늘 발견, 핵심) — VA 입금은 은행이 이체 전 실시간으로 조회하는 단계(<b>0900 수취조회</b>)를 거치는데, <b>is_advance_accepted=false</b>면 신청액과 정확히 일치하지 않는 입금은 이 단계에서 은행이 이체 자체를 거절한다(선수금 예치조차 안 됨). 이 토글은 기존에 어드민 전용 수동 액션이라 신청 등록만으로는 자동으로 켜지지 않음 — 신청 시점에 자동 전환하는 로직이 없으면, 이체한도로 분할 입금하는 고객은 이 화면의 "처리 상태" 자체를 보지 못하고 원인 불명의 은행 이체 실패를 겪게 된다.', risk:true},
+    {t:'"입금액 불일치 → 자동 취소" 정책 반영(오늘, 정책 변경) — 이전엔 불일치 입금이 선수금으로 예치된 채 신청이 "처리중"에서 무기한 멈춰있는 문제가 있었음. 이제 <b>RepaymentDepositProcessor</b>가 불일치를 감지하는 즉시 신청을 자동 취소하도록 설계 변경(CUSTOMER_SELF 채널 한정, PRD 5-2). "입금액 불일치 예시 보기" 토글로 이 상태를 시연 — 처리중 단계가 영원히 지속되는 일은 없다는 게 핵심.', risk:true},
+    {t:'분할입금 미수용 트레이드오프(근거 정정) — 이체한도로 나눠 보내야 하는 고객은 첫 입금만으로 자동취소되므로, 셀프서비스에서는 더 이상 분할입금이 수용되지 않는다. 처음엔 "신청이 즉시·무료로 재시도 가능하다"를 근거로 들었으나, 이건 틀렸다 — 자동취소 후에도 선수금 잔액이 남는 한 재신청은 막힌다. 진짜 근거는 "무기한 처리중 대기보다, 취소됐다는 사실을 즉시 명확히 아는 게 낫다"는 것(PRD 5-3 참조) — 실제 해소(재신청 가능해짐)는 여전히 어드민 정리를 기다려야 함.', risk:true},
+    {t:'[처음으로] 버튼 동작 수정(리뷰에서 발견된 버그 + 이후 근거 정정) — 이전에는 미입금 상태에서 [처음으로]를 눌러도 무조건 "신청 가능" 화면으로 초기화돼, 방금 낸 신청이 있다는 사실이 화면에서 사라지는 것처럼 보였다. 이제 취소되지 않은(아직 진행 중인) 상태에서 누르면 0단계가 "대기 중인 신청 있음" 차단 화면으로 이동하고, 거기서 "신청 현황 보기"로 다시 5단계로 돌아올 수 있다 — 취소된 상태(입금액 불일치 예시)에서 누르면 "미처리 선수금 잔액" 차단 화면으로 이동한다(완전히 새 신청이 가능한 화면이 아님 — 방금 입금된 돈이 아직 선수금으로 남아있으므로).'},
+  ],
+];
+
+let step = 0;
+let blockState = 'ok'; // 'ok' | 'pending' | 'advance' | 'other'
+let amount = 3000000;
+let selectedDate = null;
+let agreed = false;
+let rationaleOn = false;
+let mismatchDemo = false;
+let viewOnlyProgress = false; // '신청 현황 보기'로 바로 진입한 경우 — 이전 단계(결과 확인 등)로 되돌아갈 문맥이 없음
+const MIN_AMOUNT = 50000;
+const OUTSTANDING = 10000000;
+const NOW = new Date(2026,6,22);
+const EARLIEST = new Date(NOW); // 코드 재검증: getAllowedAdditionalRepaymentDateList()는 오늘(당일)부터 포함 — 선납 이력 없는 경우
+const MAX_DATE = new Date(2026,7,15);
+const CURRENT_ROUND_START = new Date(2026,6,15); // 이번 정규회차 시작일(직전 정기상환일)
+const NOMINAL_RATE = 0.1568; // 약정 이자율 연 15.68% (상환 정보 카드 기준)
+
+function sameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.getMonth()===b.getMonth() && a.getDate()===b.getDate(); }
+function fmtDate(d){ return d ? `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}` : ''; }
+function toISO(d){ return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''; }
+function daysBetween(a,b){ return Math.round((b - a) / 86400000); }
+const LAST_VALID = new Date(MAX_DATE); // 코드 재검증: 다음 정기상환일 "전날"이 아니라 그 당일까지 포함
+
+function onDateInput(value){
+  if(!value){ selectedDate = null; renderBody(); return; }
+  const [y,m,d] = value.split('-').map(Number);
+  selectedDate = new Date(y, m-1, d);
+  renderBody();
+}
+function pickEarliest(){ selectedDate = new Date(EARLIEST); renderBody(); }
+
+function calc(amt){
+  // 경과이자: 이번 정규회차 시작일~중도청구 시점까지, 대출잔액 전체에 붙는 이자.
+  // 코드 SoT(core-banking-settlement.md §4-4 중도청구): 기존 정규회차를 쪼개 그 구간만 별도 청구 —
+  // 상환 원금(amt) 크기와는 무관하고, 경과일수 × 현재 잔여원금 × 약정이자율로 계산됨.
+  const days = selectedDate ? Math.max(0, daysBetween(CURRENT_ROUND_START, selectedDate)) : 0;
+  const interest = Math.round(OUTSTANDING * NOMINAL_RATE / 365 * days / 10) * 10;
+  const fee = Math.round(amt*0.0086/10)*10;
+  return {interest, fee, total: amt+interest+fee, days};
+}
+
+const NEXT3_AVG_BEFORE = Math.round((224472+224585+225154)/3); // 상환 스케줄 표 2~4회차 평균(정적 예시)
+function calcScheduleImpact(amt){
+  // 근사치: 정확한 재상각(amortization) 재계산은 백엔드 로직 복제가 필요해 이번 목업에서는
+  // "원금 감소 비율만큼 향후 평균 월상환액도 비례해 줄어든다"는 단순 비례 근사를 사용.
+  const ratio = Math.max(0, (OUTSTANDING - amt) / OUTSTANDING);
+  const after = Math.round(NEXT3_AVG_BEFORE * ratio / 10) * 10;
+  return { before: NEXT3_AVG_BEFORE, after, delta: NEXT3_AVG_BEFORE - after };
+}
+
+function renderTracker(){
+  const el = document.getElementById('tracker');
+  el.innerHTML = STEPS.map((label,i) => {
+    const cls = i < step ? 'done' : (i === step ? 'active' : '');
+    const mark = i < step ? '✓' : (i+1);
+    return `<div class="tstep ${cls}"><div class="dot">${mark}</div><div class="lbl">${label}</div></div>`;
+  }).join('');
+}
+
+function renderRationale(){
+  const panel = document.getElementById('rationalePanel');
+  const btn = document.getElementById('rationaleBtn');
+  btn.classList.toggle('on', rationaleOn);
+  panel.classList.toggle('show', rationaleOn);
+  if(!rationaleOn) return;
+  panel.innerHTML = `<div class="rp-title">PRD 근거 — ${STEPS[step]} 단계</div><ul>${
+    RATIONALE[step].map(r => `<li${r.risk?' class="risk"':''}>${r.t}</li>`).join('')
+  }</ul>`;
+}
+
+function toggleRationale(){
+  rationaleOn = !rationaleOn;
+  renderRationale();
+}
+
+function renderBody(){
+  const el = document.getElementById('stepBody');
+  const nextBtn = document.getElementById('nextBtn');
+  const prevBtn = document.getElementById('prevBtn');
+  prevBtn.disabled = step === 0 || (step === 4 && viewOnlyProgress);
+
+  if(step === 0){
+    el.innerHTML = `
+      <div class="step-col">
+        <h4>신청 가능 여부</h4>
+        ${blockState === 'other' ? `
+          <div class="block-notice">
+            <div class="ic">!</div>
+            <div>
+              <b>지금은 부분중도상환을 신청하실 수 없어요</b>
+              <p>정확한 사유는 상담사가 확인해 드릴게요. 고객센터로 연락하시면 상담사가 자세히 안내해 드려요.</p>
+            </div>
+          </div>
+        ` : blockState === 'pending' ? `
+          <div class="block-notice">
+            <div class="ic">!</div>
+            <div>
+              <b>이미 진행 중인 신청이 있어요</b>
+              <p>완료되거나 취소되기 전까지는 새로 신청할 수 없어요. [신청 현황 보기] 버튼으로 진행 현황을 바로 확인할 수 있어요.</p>
+            </div>
+          </div>
+        ` : blockState === 'advance' ? `
+          <div class="block-notice">
+            <div class="ic">!</div>
+            <div>
+              <b>이전 입금 건이 아직 정리되지 않았어요</b>
+              <p>지난번 신청은 입금액 불일치로 취소됐지만, 그때 입금하신 금액을 반환 처리 중이에요. 반환 완료 후 다시 신청할 수 있어요.</p>
+            </div>
+          </div>
+        ` : `
+          <div class="check-box">
+            <div class="check-row"><span class="ic ok">✓</span><div class="txt">연체 잔액 없음</div></div>
+            <div class="check-row"><span class="ic ok">✓</span><div class="txt">대기 중인 신청 없음</div></div>
+            <div class="check-row"><span class="ic ok">✓</span><div class="txt">선납 신청 이력 없음</div></div>
+          </div>
+        `}
+        <button class="demo-toggle" onclick="cycleBlockState()">${blockState === 'ok' ? '대기중 신청으로 차단 예시 보기 →' : blockState === 'pending' ? '미처리 선수금 차단 예시 보기 →' : blockState === 'advance' ? '기타 사유 차단 예시 보기 →' : '← 신청 가능 상태로 보기'}</button>
+      </div>
+      <div class="step-col">
+        <h4>안내</h4>
+        <ul class="notes">
+          <li>이미 처리 대기 중인 신청이 있다면, 완료 후 다시 신청해 주세요.</li>
+        </ul>
+        ${(blockState === 'other' || blockState === 'advance') ? '<div style="margin-top:16px;"><a class="pill-btn" href="tel:0225658856" style="text-decoration:none;">고객센터 02-565-8856</a></div>' : ''}
+        ${blockState === 'pending' ? '<div style="margin-top:16px;"><button class="pill-btn" onclick="goToProgressView()">신청 현황 보기</button></div>' : ''}
+      </div>
+    `;
+    nextBtn.textContent = '부분중도상환 신청하기';
+    nextBtn.disabled = blockState !== 'ok';
+  }
+
+  if(step === 1){
+    const amtValid = amount >= MIN_AMOUNT && amount <= OUTSTANDING;
+    const dateValid = !!selectedDate;
+    el.innerHTML = `
+      <div class="step-col">
+        <h4>상환할 원금</h4>
+        <label class="field-label">현재 잔여원금 ${won(OUTSTANDING)}</label>
+        <div class="amount-input-wrap">
+          <input id="amtInput" type="text" inputmode="numeric" value="${amount.toLocaleString('ko-KR')}" />
+          <span>원</span>
+        </div>
+        <p class="helper">${amtValid ? `최소 ${won(MIN_AMOUNT)} 이상, 잔여원금 이하로 입력할 수 있어요.` : `<span style="color:#C1443B;">최소 ${won(MIN_AMOUNT)} 이상, 잔여원금 이하로 입력해 주세요.</span>`}</p>
+        <div class="compare-mini">
+          <div class="c no"><b>선납이 아니에요</b><p>예정일보다 미리 내는 것 — 미래 회차 금액은 그대로예요.</p></div>
+          <div class="c yes"><b>부분중도상환이에요</b><p>미래 회차의 원금 일부를 상환하여 줄이는 거예요.</p></div>
+        </div>
+        <p class="helper" style="margin-top:10px;">신청 완료 후에는 취소가 어려워요 — 금액을 신중히 입력해 주세요.</p>
+      </div>
+      <div class="step-col">
+        <h4>상환일 선택</h4>
+        <div class="date-input-wrap">
+          <input type="date" id="dateInput" min="${toISO(EARLIEST)}" max="${toISO(LAST_VALID)}" value="${toISO(selectedDate)}" onchange="onDateInput(this.value)" />
+        </div>
+        <button class="demo-toggle" style="margin-top:10px;" onclick="pickEarliest()">가장 이른 처리일로 선택</button>
+        <p class="helper" style="margin-top:10px;">${dateValid ? `선택한 상환일: <b style="color:#303339;">${fmtDate(selectedDate)}</b>` : '<span style="color:#C1443B;">신청 가능한 날짜를 선택해 주세요.</span>'} 다음 정기상환일(${fmtDate(MAX_DATE)})까지 자유롭게 고를 수 있어요.</p>
+      </div>
+    `;
+    nextBtn.textContent = '다음';
+    nextBtn.disabled = !amtValid || !dateValid;
+
+    document.getElementById('amtInput').addEventListener('input', (e) => {
+      const raw = e.target.value.replace(/[^0-9]/g,'');
+      amount = raw ? parseInt(raw,10) : 0;
+      renderBody();
+      const inp = document.getElementById('amtInput');
+      inp.focus();
+      inp.setSelectionRange(inp.value.length, inp.value.length);
+    });
+  }
+
+  if(step === 2){
+    const {interest, fee, total} = calc(amount);
+    const impact = calcScheduleImpact(amount);
+    el.innerHTML = `
+      <div class="step-col">
+        <h4>부분중도상환 예상 금액</h4>
+        <div class="breakdown-box">
+          <div class="bd-row"><span class="k">원금</span><span class="v">${won(amount)}</span></div>
+          <div class="bd-row"><span class="k">경과이자<span style="display:block;font-size:11px;color:#8A919B;font-weight:400;margin-top:2px;">(${fmtDate(CURRENT_ROUND_START)}~${fmtDate(selectedDate)})</span></span><span class="v">${won(interest)}</span></div>
+          <div class="bd-row"><span class="k">중도상환수수료</span><span class="v">${won(fee)}</span></div>
+        </div>
+        <div class="bd-total"><span>총 납입예정액</span><span class="v">${won(total)}</span></div>
+        <p class="helper">선택한 상환일(${fmtDate(selectedDate)}) 기준으로 계산된 금액이에요 — 상환일을 바꾸면 금액도 달라져요.</p>
+        <div class="before-after">
+          <div class="ba-tile">
+            <span class="ba-label">지금 그대로면</span>
+            <b class="ba-value">${won(impact.before)}</b>
+            <span class="ba-sub">향후 3개월 평균 상환예상액</span>
+          </div>
+          <div class="ba-arrow">→</div>
+          <div class="ba-tile after">
+            <span class="ba-label">이번 신청 반영 시</span>
+            <b class="ba-value">${won(impact.after)}</b>
+            <span class="ba-sub">향후 3개월 평균 상환예상액</span>
+          </div>
+        </div>
+        <p class="helper" style="margin-top:8px;">월 평균 ${won(impact.delta)} 감소 예상 — 근사치이며, 실제 신청 시 정확한 스케줄로 다시 계산돼요.</p>
+      </div>
+      <div class="step-col">
+        <h4>안내</h4>
+        <ul class="notes">
+          <li>부분중도상환 후에는 남은 회차의 원금·이자가 다시 계산되어 상환 스케줄이 달라져요. 단, <b>만기일은 그대로 유지되고, 매달 내는 금액만 줄어들어요.</b></li>
+          <li>법정 최고금리 한도로 중도상환수수료가 표시보다 낮게 계산될 수 있어요.</li>
+          <li>신청 완료 후에는 직접 취소가 불가능해요. 입금 전이라면 고객센터를 통해 취소를 요청할 수 있어요.</li>
+          <li><b>총 납입예정액을 상환용 가상계좌에 한 번에, 정확한 금액으로 입금해 주세요.</b> 이체한도 등으로 금액이 다르게 입금되면 신청이 자동으로 취소돼요.</li>
+        </ul>
+      </div>
+    `;
+    nextBtn.textContent = '다음';
+    nextBtn.disabled = false;
+  }
+
+  if(step === 3){
+    const {interest, fee, total} = calc(amount);
+    el.innerHTML = `
+      <div class="step-col" style="flex:1 1 100%;">
+        <h4>신청 내용 확인</h4>
+        <div class="confirm-recap">
+          <div class="kv"><span class="k">부분중도상환일</span><span class="v">${fmtDate(selectedDate)}</span></div>
+          <div class="kv"><span class="k">상환 원금</span><span class="v">${won(amount)}</span></div>
+          <div class="kv"><span class="k">경과이자<span style="display:block;font-size:11px;color:#8A919B;font-weight:400;margin-top:2px;">(${fmtDate(CURRENT_ROUND_START)}~${fmtDate(selectedDate)})</span></span><span class="v">${won(interest)}</span></div>
+          <div class="kv"><span class="k">중도상환수수료</span><span class="v">${won(fee)}</span></div>
+          <div class="kv"><span class="k">총 납입예정액</span><span class="v strong" style="color:#0443A1;">${won(total)}</span></div>
+        </div>
+        <label class="agree-row">
+          <input type="checkbox" id="agreeBox" ${agreed?'checked':''} onchange="toggleAgree(this.checked)" />
+          안내사항(법정최고금리 캡 적용 가능, 신청 완료 후 직접 취소 불가 — 입금 전이라면 고객센터로만 취소 요청 가능, 입금액이 총 납입예정액과 다르면 자동 취소됨)을 모두 확인했어요
+        </label>
+      </div>
+    `;
+    nextBtn.textContent = '신청 완료하기';
+    nextBtn.disabled = !agreed;
+  }
+
+  if(step === 4){
+    const {total} = calc(amount);
+    el.innerHTML = `
+      <div class="step-col">
+        <h4>입금 안내</h4>
+        <div class="deposit-box">
+          <div class="acct-block">
+            <div class="acct-label">상환용 가상계좌</div>
+            <div class="acct-value-row">
+              <span class="acct-value">신한은행 562-1469-0663928</span>
+              <button class="copy-icon-btn" title="계좌번호 복사" aria-label="계좌번호 복사">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="6" y="6" width="8" height="8" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M10.5 5.5V3.5C10.5 2.94772 10.0523 2.5 9.5 2.5H3.5C2.94772 2.5 2.5 2.94772 2.5 3.5V9.5C2.5 10.0523 2.94772 10.5 3.5 10.5H5.5" stroke="currentColor" stroke-width="1.4"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="kv"><span class="k">입금 금액</span><span class="v strong">${won(total)}</span></div>
+          <div class="kv"><span class="k">입금 기한</span><span class="v">${fmtDate(selectedDate)} 21:00까지</span></div>
+          <p class="acct-note">입금 후 별도 절차 없이 자동으로 처리돼요. 오전 8시부터 오후 9시까지만 입금이 가능해요. <b>표시된 금액과 정확히 일치해야 하며, 다르면 신청이 자동으로 취소돼요.</b></p>
+        </div>
+        <button class="demo-toggle" style="margin-top:12px;" onclick="toggleMismatchDemo()">${mismatchDemo ? '← 정상 처리 예시로 보기' : '입금액 불일치 예시 보기 →'}</button>
+      </div>
+      <div class="step-col">
+        ${mismatchDemo ? `
+          <h4>처리 상태 <span class="status-pill canceled">취소됨</span></h4>
+          <div class="mini-track">
+            <div class="mts pass">신청완료</div>
+            <div class="mts pass">입금대기</div>
+            <div class="mts canceled">취소됨</div>
+            <div class="mts">완료</div>
+          </div>
+          <div class="block-notice" style="margin-top:2px;">
+            <div class="ic">!</div>
+            <div>
+              <b>입금액이 신청 금액과 달라 자동으로 취소됐어요</b>
+              <p>이미 입금하신 금액은 안전하게 보관되고 있어요. 정확한 금액으로 다시 신청해 주시거나, 아래로 문의해 주세요.</p>
+            </div>
+          </div>
+          <a class="pill-btn" href="tel:0225658856" style="text-decoration:none;margin-top:12px;">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4.5 2.5H6.5L7.5 5.5L5.8 6.7C6.4 8 7.5 9.1 8.8 9.7L10 8L13 9V11C13 11.5523 12.5 12 12 12C7 12 4 9 4 4C4 3.5 4 3 4.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            고객센터 02-565-8856
+          </a>
+        ` : `
+          <h4>처리 상태 <span class="status-pill wait">입금 대기</span></h4>
+          <div class="mini-track">
+            <div class="mts pass">신청완료</div>
+            <div class="mts now">입금대기</div>
+            <div class="mts">처리중</div>
+            <div class="mts">완료</div>
+          </div>
+          <p class="helper">이 신청은 직접 취소를 지원하지 않아요. 입금 전이라면 고객센터를 통해 취소를 요청할 수 있고, 입금 후에는 취소가 불가능해요.</p>
+          <a class="pill-btn" href="tel:0225658856" style="text-decoration:none;">
+            <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M4.5 2.5H6.5L7.5 5.5L5.8 6.7C6.4 8 7.5 9.1 8.8 9.7L10 8L13 9V11C13 11.5523 12.5 12 12 12C7 12 4 9 4 4C4 3.5 4 3 4.5 2.5Z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+            고객센터 02-565-8856
+          </a>
+        `}
+      </div>
+    `;
+    nextBtn.textContent = '처음으로';
+  }
+}
+
+function render(){
+  renderTracker();
+  renderBody();
+  renderRationale();
+}
+
+function nextStep(){
+  if(step < STEPS.length-1){ viewOnlyProgress = false; step++; render(); }
+  else {
+    // 취소된 신청이 아니라면(=아직 신청완료/입금대기/처리중) 대기 중인 신청이 그대로 남아있는 상태다.
+    // 취소된 경우(입금액 불일치)에도, 그때 입금된 돈이 선수금으로 남아있는 한 재신청은 곧바로 열리지 않는다(2026-07-27 리뷰 정정).
+    const wasStillPending = !mismatchDemo;
+    step = 0;
+    blockState = wasStillPending ? 'pending' : 'advance';
+    agreed = false; mismatchDemo = false;
+    render();
+  }
+}
+function prevStep(){ if(step>0){ step--; render(); } }
+function cycleBlockState(){
+  blockState = blockState === 'ok' ? 'pending' : blockState === 'pending' ? 'advance' : blockState === 'advance' ? 'other' : 'ok';
+  if(blockState === 'ok'){ amount = 3000000; selectedDate = null; }
+  render();
+}
+function goToProgressView(){
+  if(!selectedDate) selectedDate = EARLIEST;
+  viewOnlyProgress = true;
+  step = 4;
+  render();
+}
+function toggleAgree(v){ agreed = v; render(); }
+function toggleMismatchDemo(){ mismatchDemo = !mismatchDemo; renderBody(); }
+
+render();
+</script>
