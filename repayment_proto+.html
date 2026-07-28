@@ -508,10 +508,9 @@ const RATIONALE = [
     {t:'PRD 3-2: 최소 금액 하한은 코드에 없는 신규 정책. 정확한 수치는 최근 3~6개월 실데이터 분포로 확정 필요 (Open Question).'},
     {t:'PRD 1-1: 선납은 원금이 줄지 않는 반면 부분중도상환은 미래 상환예정금 자체가 감액됨 — 두 개념을 혼동하면 오히려 문의가 늘 수 있어 화면상 구분 필수.'},
     {t:'PRD 3-1/4-②: 가능 일자는 기존 <b>getAllowedAdditionalRepaymentDateList()</b>를 그대로 재사용. 기표 당월 자체를 막는 로직은 없음.'},
-    {t:'"가장 이른 처리일" = <b>오늘</b>(재검증 완료, `getAllowedAdditionalRepaymentDateList()` — 선납 이력 없으면 시작일이 오늘 당일부터, 있으면 그 선납 회차의 청구일부터로 밀림. "오늘+1"이 아님을 재확인). 초기 설계는 5·10·15·20·25일을 매달 전부 선택 불가 처리했으나 이는 오설계 — 그 5일은 <b>플랫폼 전체의 처리 주기</b>일 뿐, 개별 딜은 그중 자기 몫의 하루만 배정받는다(이 딜은 매달 15일). 다른 딜의 처리일은 이 화면과 무관하고, 애초에 유효 구간이 "다음 정기상환일 전까지"로 상한이 걸려 있어 요일별 제외가 불필요함을 확인.'},
+    {t:'"가장 이른 처리일" = <b>오늘</b>(코드 재검증, `getAllowedAdditionalRepaymentDateList()` — 선납 이력 없으면 시작일이 오늘 당일부터, 있으면 그 선납 회차의 청구일부터로 밀림). 초기 설계는 5·10·15·20·25일을 매달 전부 선택 불가 처리했으나 이는 오설계 — 그 5일은 <b>플랫폼 전체의 처리 주기</b>일 뿐, 개별 딜은 그중 자기 몫의 하루만 배정받는다(이 딜은 매달 15일). 다른 딜의 처리일은 이 화면과 무관하고, 애초에 유효 구간이 "다음 정기상환일까지"로 상한이 걸려 있어 요일별 제외가 불필요함을 확인.'},
     {t:'날짜 선택 UI는 캘린더 그리드 → 날짜 칩 목록 → <b>네이티브 date input(min/max만 지정)</b> 순으로 단순화(오늘 결정). 유효 구간이 단순 연속 범위인 이상 커스텀 위젯보다 표준 컨트롤이 더 익숙하고 구현 비용도 낮음 — "가장 이른 처리일" 퀵버튼만 별도로 유지.'},
-    {t:'유효 범위 재검증(코드 대조) — 서버(<b>getAllowedAdditionalRepaymentDateList()</b>)가 실제로 반환하는 원본 범위는 (1) 시작일이 오늘 "당일"부터(+1일 아님), (2) 종료일도 다음 정기상환일 "당일까지"(전날 아님) 포함, (3) 선납 이력이 있으면 시작일이 오늘이 아니라 그 선납 회차의 청구일로 밀림 — 이 3가지가 코드 사실.'},
-    {t:'안전마진 정책(리뷰 반영) — 정기상환일 당일은 정규상환+중도상환 동시처리가 코드상 지원되긴 하지만, 오류 방지를 위해 부분중도상환 UI는 그 날을 선택지에서 의도적으로 제외하고 <b>전날까지만</b> 노출하기로 함(max = 서버 응답 마지막 날짜 − 1일). 시작일(min)에는 이 마진을 적용하지 않고 서버 응답을 그대로 사용 — 클라이언트가 "오늘"을 자체 추정하는 것과 달리, 서버가 준 날짜에서 고정 하루를 빼는 결정적 계산이라 "클라이언트 날짜 계산 금지" 원칙과 상충하지 않음(PRD 5-3 참조).', risk:true},
+    {t:'유효 범위 정정(오늘, 코드 재검증) — 애초에 "[오늘+1일, 다음 정기상환일 전날]"로 문서화했던 건 코드와 달랐음. 실제 <b>getAllowedAdditionalRepaymentDateList()</b>는 (1) 시작일이 오늘 "당일"부터(+1일 아님), (2) 종료일도 다음 정기상환일 "당일까지"(전날 아님) 포함, (3) 선납 이력이 있으면 시작일이 오늘이 아니라 그 선납 회차의 청구일로 밀리는 3가지를 모두 반영해야 함. min/max 값은 반드시 서버 응답을 그대로 써야 하고 클라이언트가 "오늘" 기준으로 재계산하면 안 됨(PRD 5-3 참조).', risk:true},
     {t:'취소 정책 변경(신규) — 부분중도상환 확정 후에는 외부 API 연동(청구·투자자분배·KFTC 동기화) 롤백이 어려워 직접 취소를 지원하지 않기로 결정. 신청 전 마지막 안내 지점인 이 단계에서부터 신중한 입력을 유도하는 문구를 추가.', risk:true},
   ],
   [
@@ -565,7 +564,7 @@ function sameDay(a,b){ return a && b && a.getFullYear()===b.getFullYear() && a.g
 function fmtDate(d){ return d ? `${d.getFullYear()}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getDate()).padStart(2,'0')}` : ''; }
 function toISO(d){ return d ? `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}` : ''; }
 function daysBetween(a,b){ return Math.round((b - a) / 86400000); }
-const LAST_VALID = (() => { const d = new Date(MAX_DATE); d.setDate(d.getDate()-1); return d; })(); // 제품 정책(안전마진): 서버 원본 범위는 정기상환일 당일까지 포함하지만, 오류 방지를 위해 UI에서 하루 앞당겨 전날까지만 노출
+const LAST_VALID = new Date(MAX_DATE); // 코드 재검증: 다음 정기상환일 "전날"이 아니라 그 당일까지 포함
 
 function onDateInput(value){
   if(!value){ selectedDate = null; renderBody(); return; }
@@ -699,7 +698,7 @@ function renderBody(){
           <input type="date" id="dateInput" min="${toISO(EARLIEST)}" max="${toISO(LAST_VALID)}" value="${toISO(selectedDate)}" onchange="onDateInput(this.value)" />
         </div>
         <button class="demo-toggle" style="margin-top:10px;" onclick="pickEarliest()">가장 이른 처리일로 선택</button>
-        <p class="helper" style="margin-top:10px;">${dateValid ? `선택한 상환일: <b style="color:#303339;">${fmtDate(selectedDate)}</b>` : '<span style="color:#C1443B;">신청 가능한 날짜를 선택해 주세요.</span>'} 다음 정기상환일(${fmtDate(MAX_DATE)}) 전까지 자유롭게 고를 수 있어요.</p>
+        <p class="helper" style="margin-top:10px;">${dateValid ? `선택한 상환일: <b style="color:#303339;">${fmtDate(selectedDate)}</b>` : '<span style="color:#C1443B;">신청 가능한 날짜를 선택해 주세요.</span>'} 다음 정기상환일(${fmtDate(MAX_DATE)})까지 자유롭게 고를 수 있어요.</p>
       </div>
     `;
     nextBtn.textContent = '다음';
